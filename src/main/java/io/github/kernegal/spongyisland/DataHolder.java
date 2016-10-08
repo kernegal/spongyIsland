@@ -31,7 +31,7 @@ public class DataHolder {
         this.plugin=plugin;
         Optional<SqlService> sqlOpt = Sponge.getServiceManager().provide(SqlService.class);
         if(!sqlOpt.isPresent()){
-            plugin.getLogger().error("An error occured when  getting the sql service ");
+            plugin.getLogger().error("An error occurred when  getting the sql service ");
             //TODO exit properly
         }
         sql = sqlOpt.get();
