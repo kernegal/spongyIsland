@@ -7,6 +7,8 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java/io/github/kernegal/spongyisland/defaultConfigs" type="java-resource" relativeOutputPath="io/github/kernegal/spongyinsland/defaultConfigs" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java/io/github/kernegal/spongyisland/defaultSchematics" type="java-resource" />
       <excludeFolder url="file://$MODULE_DIR$/.idea" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>

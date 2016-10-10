@@ -2,7 +2,10 @@ package io.github.kernegal.spongyisland;
 
 import com.google.inject.Inject;
 import io.github.kernegal.spongyisland.commands.IACreateSchematicCommand;
+import io.github.kernegal.spongyisland.commands.IsCreate;
 import io.github.kernegal.spongyisland.commands.IslandAdminCommand;
+import io.github.kernegal.spongyisland.commands.IslandCommand;
+import io.github.kernegal.spongyisland.utils.IslandManager;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
@@ -16,10 +19,11 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.plugin.Plugin;
+import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.text.Text;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
 
 /**
  * Created by kernegal on 02/10/2016.
@@ -31,6 +35,13 @@ public class SpongyIsland {
     public static final String version="0.1.0";
     public static final String pluginId="spongyisland";
     public static final String pluginName="Spongy Island";
+    public static final String SchematicBedrockPosition = "bedrock_position";
+
+
+    @Inject private PluginContainer plugin;
+    public PluginContainer getPlugin() {
+        return plugin;
+    }
 
     @Inject
     private Logger logger;
@@ -39,11 +50,25 @@ public class SpongyIsland {
     @ConfigDir(sharedRoot = false)
     private File configDir;
 
+    private File schematicsFolder;
+
+    private IslandManager isManager;
+
     private DataHolder data;
+
+    public DataHolder getDataHolder() {
+        return data;
+    }
+
+
+    private CommentedConfigurationNode globalConfigNode;
+    private CommentedConfigurationNode challengesConfigNode;
+    private CommentedConfigurationNode valuesConfigNode;
 
 
 
     public File getConfigPath() { return this.configDir; }
+    public File getSchematicsFolder() { return schematicsFolder; }
     public Logger getLogger() {
         return logger;
     }
@@ -56,42 +81,82 @@ public class SpongyIsland {
             configDir.mkdir();
         }
 
+        schematicsFolder = new File(getConfigPath(), "schematics");
+        if(!schematicsFolder.exists()){
+            schematicsFolder.mkdir();
+
+            //URL inputUrl=this.getClass().getResource("defaultSchematics/default.schematic");
+            File defSchem= new File(schematicsFolder, "default.schematic");
 
 
-        File globalConfig = new File(configDir , "config.conf");
+            InputStream ddlStream = this.getClass().getResourceAsStream("defaultSchematics/default.schematic");
+
+            try (FileOutputStream fos = new FileOutputStream(defSchem)){
+                byte[] buf = new byte[2048];
+                int r;
+                while(-1 != (r = ddlStream.read(buf))) {
+                    fos.write(buf, 0, r);
+                }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        File globalConfig = new File(configDir, "config.conf");
         ConfigurationLoader<CommentedConfigurationNode> globalConfigManager =
                 HoconConfigurationLoader.builder().setFile(globalConfig).build();
-        CommentedConfigurationNode globalConfigNode;
 
-        File challengesConfig = new File(configDir + "/challenges.conf");
+        File challengesConfig = new File(configDir, "challenges.conf");
         ConfigurationLoader<CommentedConfigurationNode> challengesConfigManager =
                 HoconConfigurationLoader.builder().setFile(challengesConfig).build();
-        CommentedConfigurationNode challengesConfigNode;
 
-        File valuesConfig = new File(configDir + "/blockvalues.conf");
+        File valuesConfig = new File(configDir, "blockvalues.conf");
         ConfigurationLoader<CommentedConfigurationNode> valuesConfigManager =
                 HoconConfigurationLoader.builder().setFile(valuesConfig).build();
-        CommentedConfigurationNode valuesConfigNode;
         try {
-            globalConfigNode = globalConfigManager.load();
-            globalConfigManager.save(globalConfigNode);
+            if(!globalConfig.exists()){
+                globalConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/config.conf")).build().load();
+                globalConfigManager.save(globalConfigNode);
+            }
+            else {
+                globalConfigNode = globalConfigManager.load();
+            }
 
-            challengesConfigNode = challengesConfigManager.load();
-            challengesConfigManager.save(challengesConfigNode);
+            if(!challengesConfig.exists()){
+                challengesConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/challenges.conf")).build().load();
+                challengesConfigManager.save(challengesConfigNode);
+            }
+            else{
+                challengesConfigNode = challengesConfigManager.load();
+            }
 
-            valuesConfigNode = valuesConfigManager.load();
-            valuesConfigManager.save(valuesConfigNode);
+            if(!valuesConfig.exists()) {
+                valuesConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/blockvalues.conf")).build().load();
+                valuesConfigManager.save(valuesConfigNode);
+            }
+            else{
+                valuesConfigNode = valuesConfigManager.load();
+
+            }
 
         } catch(IOException e) {
-            // error
+            getLogger().error(e.toString());
         }
+
+
 
     }
 
     @Listener
     public void init(GameInitializationEvent event) {
+
         getLogger().info("Preparing data");
         data = new DataHolder(this);
+
+        isManager=new IslandManager(this,data,globalConfigNode);
 
         prepareCommands();
 
@@ -104,6 +169,25 @@ public class SpongyIsland {
 
 
     private void prepareCommands(){
+
+        //Island commands
+        //is create
+        CommandSpec newIsCreateCommand =  CommandSpec.builder()
+                .description(Text.of("list admin commands"))
+                .permission(SpongyIsland.pluginId+".command.admin")
+                .arguments(GenericArguments.string(Text.of("schematic")))
+                .executor(new IsCreate(this,isManager))
+                .build();
+
+        //is
+        CommandSpec newIslandCommand =  CommandSpec.builder()
+                .description(Text.of("list admin commands"))
+                .permission(SpongyIsland.pluginId+".command.admin")
+                .child(newIsCreateCommand,"create","c")
+                .executor(new IslandCommand(this))
+                .build();
+
+        Sponge.getCommandManager().register(this, newIslandCommand, "island", "is");
 
         //Admin commands
         CommandSpec newSchematicCommand = CommandSpec.builder()
