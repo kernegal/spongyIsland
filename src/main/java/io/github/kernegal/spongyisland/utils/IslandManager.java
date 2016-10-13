@@ -68,8 +68,7 @@ public class IslandManager {
                 continue;
             }
 
-            Schematic schematic = null;
-            schematic = DataTranslators.SCHEMATIC.translate(schematicData);
+            Schematic schematic = DataTranslators.SCHEMATIC.translate(schematicData);
 
             Island is= new Island(schematic,plugin,
                     schematicNode.getNode("name").getString(),
@@ -121,11 +120,14 @@ public class IslandManager {
         }
         //TODO make the world configurable
         World world = Sponge.getServer().getWorld("world").get();
-        Vector3i position = new Vector3i(newIslandPos.getX()*islandRadius*2,islandHeight,newIslandPos.getY()*islandRadius*2);;
+        Vector3i position = new Vector3i(newIslandPos.getX()*islandRadius*2,islandHeight,newIslandPos.getY()*islandRadius*2);
         is.place(world,position,player);
         preLastIslandCreated=lastIslandCreated;
         lastIslandCreated=newIslandPos;
-        //TODO save changes into database
+
+        //Tell to save the data
+        dataHolder.newIsland(newIslandPos,position,player.getUniqueId());
+        //dataHolder.uptdateIslandHome(player.getUniqueId(),position);
         //TODO ban player during time to avoid continuously creating islands.
         plugin.getLogger().info("pasting schematic "+schematic+" into position ("+newIslandPos.getX()*islandRadius*2+"["+newIslandPos.getX()
                 +"],"+newIslandPos.getY()*islandRadius*2+"["+newIslandPos.getY()+"])");

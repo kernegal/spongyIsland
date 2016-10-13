@@ -95,7 +95,7 @@ public class IACreateSchematicCommand implements CommandExecutor {
         }
 
         plugin.getLogger().info("Creating schema");
-        ArchetypeVolume volume = player.getWorld().createArchetypeVolume(min, max, player.getLocation().getPosition().toInt());
+        ArchetypeVolume volume = player.getWorld().createArchetypeVolume(min, max, bedRockPos);
 
         Schematic schematic = Schematic.builder()
                 .volume(volume)

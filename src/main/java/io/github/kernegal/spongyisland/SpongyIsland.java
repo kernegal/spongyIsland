@@ -1,16 +1,15 @@
 package io.github.kernegal.spongyisland;
 
 import com.google.inject.Inject;
-import io.github.kernegal.spongyisland.commands.IACreateSchematicCommand;
-import io.github.kernegal.spongyisland.commands.IsCreate;
-import io.github.kernegal.spongyisland.commands.IslandAdminCommand;
-import io.github.kernegal.spongyisland.commands.IslandCommand;
+import io.github.kernegal.spongyisland.commandConfirmation.ConfirmationService;
+import io.github.kernegal.spongyisland.commands.*;
 import io.github.kernegal.spongyisland.utils.IslandManager;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 
 import org.slf4j.Logger;
+import org.spongepowered.api.Game;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
@@ -18,6 +17,7 @@ import org.spongepowered.api.config.ConfigDir;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
+import org.spongepowered.api.event.network.ClientConnectionEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.text.Text;
@@ -46,6 +46,8 @@ public class SpongyIsland {
     @Inject
     private Logger logger;
 
+    @Inject private Game game;
+
     @Inject
     @ConfigDir(sharedRoot = false)
     private File configDir;
@@ -55,23 +57,20 @@ public class SpongyIsland {
     private IslandManager isManager;
 
     private DataHolder data;
+    public DataHolder getDataHolder() { return data; }
 
-    public DataHolder getDataHolder() {
-        return data;
-    }
-
+    private ConfirmationService service;
+    public ConfirmationService getService() { return service; }
 
     private CommentedConfigurationNode globalConfigNode;
     private CommentedConfigurationNode challengesConfigNode;
     private CommentedConfigurationNode valuesConfigNode;
-
-
-
     public File getConfigPath() { return this.configDir; }
     public File getSchematicsFolder() { return schematicsFolder; }
     public Logger getLogger() {
         return logger;
     }
+
 
 
     @Listener
@@ -147,16 +146,21 @@ public class SpongyIsland {
         }
 
 
-
     }
 
     @Listener
     public void init(GameInitializationEvent event) {
 
+
         getLogger().info("Preparing data");
         data = new DataHolder(this);
+        //Sponge.getEventManager().registerListeners(this, data);
 
         isManager=new IslandManager(this,data,globalConfigNode);
+
+        service = new ConfirmationService();
+
+        Sponge.getEventManager().registerListeners(this, new IslandProtection(data,globalConfigNode.getNode("island","radius").getInt(),globalConfigNode.getNode("island","protectionRadius").getInt()) );
 
         prepareCommands();
 
@@ -167,23 +171,39 @@ public class SpongyIsland {
 
     }
 
+    @Listener
+    public void playerLogin(ClientConnectionEvent.Join event){
+        data.playerLogin(event.getTargetEntity());
+    }
+
 
     private void prepareCommands(){
 
         //Island commands
         //is create
         CommandSpec newIsCreateCommand =  CommandSpec.builder()
-                .description(Text.of("list admin commands"))
-                .permission(SpongyIsland.pluginId+".command.admin")
+                .description(Text.of("Create new island"))
                 .arguments(GenericArguments.string(Text.of("schematic")))
-                .executor(new IsCreate(this,isManager))
+                .executor(new IsCreate(this,isManager,data))
                 .build();
 
+        //is home
+        CommandSpec newIsHomeCommand =  CommandSpec.builder()
+                .description(Text.of("teleport to island"))
+                .executor(new IsHome(this,data))
+                .build();
+
+        //is sethome
+        CommandSpec newIsSetHomeCommand =  CommandSpec.builder()
+                .description(Text.of("set your island home position"))
+                .executor(new IsSetHome(data,globalConfigNode.getNode("island","radius").getInt(),globalConfigNode.getNode("island","protectionRadius").getInt()))
+                .build();
         //is
         CommandSpec newIslandCommand =  CommandSpec.builder()
-                .description(Text.of("list admin commands"))
-                .permission(SpongyIsland.pluginId+".command.admin")
-                .child(newIsCreateCommand,"create","c")
+                .description(Text.of("list island commands"))
+                .child(newIsCreateCommand,"create","reset")
+                .child(newIsHomeCommand,"home", "h")
+                .child(newIsSetHomeCommand,"setHome", "sh")
                 .executor(new IslandCommand(this))
                 .build();
 
@@ -213,6 +233,14 @@ public class SpongyIsland {
                 .build();
 
         Sponge.getCommandManager().register(this, adminCommand, "islandAdmin");
+
+        //confirmation
+        CommandSpec confirmationCommand = CommandSpec.builder()
+                .description(Text.of("confirm commands"))
+                .arguments(GenericArguments.string(Text.of(ConfirmationService.argumentString)))
+                .executor(service)
+                .build();
+        Sponge.getCommandManager().register(this, confirmationCommand, "isconfirm");
     }
 
 

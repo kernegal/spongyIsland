@@ -31,7 +31,8 @@ import java.util.Optional;
  */
 public class Island {
     private ArchetypeVolume volume;
-    private Vector3i bedrockPosition, signPosition;
+    //private Vector3i bedrockPosition;
+    private Vector3i signPosition;
     private SpongyIsland plugin;
     private String name, description;
 
@@ -44,13 +45,13 @@ public class Island {
 
         Vector3i min=schematic.getBlockMin(),max=schematic.getBlockMax();
 
-        for (int i = min.getX(); i <= max.getX() && bedrockPosition==null; i++) {
-            for (int j = max.getY(); j >= min.getY() && bedrockPosition==null; j--) {
-                for (int k = min.getZ(); k <= max.getZ() && bedrockPosition==null; k++) {
+        for (int i = min.getX(); i <= max.getX(); i++) {
+            for (int j = max.getY(); j >= min.getY(); j--) {
+                for (int k = min.getZ(); k <= max.getZ(); k++) {
                     BlockState block = schematic.getBlock(i, j, k);
-                    if (block.getType() == BlockTypes.BEDROCK){
+                    /*if (block.getType() == BlockTypes.BEDROCK){
                         bedrockPosition=new Vector3i(i,j,k);
-                    }
+                    }*/
                     if(block.getType() == BlockTypes.STANDING_SIGN){
                         signPosition = new Vector3i(i,j,k);
 
@@ -75,9 +76,9 @@ public class Island {
             return -1;
         }
 
-        position = position.sub(bedrockPosition);
+        //position = position.sub(bedrockPosition);
         volume.apply(new Location<>(world, position), BlockChangeFlag.ALL,
-                Cause.of(NamedCause.of("plugin", plugin.getPlugin()), NamedCause.source(player)));
+                Cause.of(NamedCause.of("plugin", plugin.getPlugin())/*, NamedCause.source(player)*/));
 
         if(signPosition!=null) {
             Location<World> signLocation = new Location<>(world, signPosition.add(position));
