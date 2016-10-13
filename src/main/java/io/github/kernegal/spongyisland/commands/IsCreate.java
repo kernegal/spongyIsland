@@ -50,8 +50,8 @@ public class IsCreate implements CommandExecutor {
 
                 @Override
                 public void confirm(CommandSource source) {
-                    isManager.create(schema,player);
-                    data.teleportPlayerToHome(player);
+                    if(isManager.create(schema,player))
+                        data.teleportPlayerToHome(player);
                 }
 
                 @Override
@@ -63,8 +63,8 @@ public class IsCreate implements CommandExecutor {
         }
 
 
-        isManager.create(schema,player);
-        data.teleportPlayerToHome(player);
+        if(isManager.create(schema,player))
+            data.teleportPlayerToHome(player);
 
         return CommandResult.success();
     }

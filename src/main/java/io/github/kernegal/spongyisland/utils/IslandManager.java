@@ -18,7 +18,6 @@ import org.spongepowered.api.world.schematic.Schematic;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
@@ -33,6 +32,7 @@ public class IslandManager {
     private Vector2i lastIslandCreated, preLastIslandCreated;
     private int islandHeight;
     private int islandRadius;
+    private int secondsBetweenIslands;
 
     public IslandManager(SpongyIsland plugin, DataHolder dataHolder, ConfigurationNode configuration) {
         this.plugin = plugin;
@@ -40,13 +40,16 @@ public class IslandManager {
 
         ConfigurationNode islandNode = configuration.getNode("island");
         ConfigurationNode schematicsNode = configuration.getNode("schematics");
+        ConfigurationNode generalNode = configuration.getNode("general");
+
 
         this.islandRadius = islandNode.getNode("radius").getInt();
         this.islandHeight = islandNode.getNode("island_height").getInt();
 
+        this.secondsBetweenIslands = generalNode.getNode("reset_wait").getInt();
+
         this.islandsPresets = new HashMap<>();
         Map<Object, ? extends ConfigurationNode> childrenMap = schematicsNode.getChildrenMap();
-        plugin.getLogger().info("Loading: "+childrenMap);
 
         for (Map.Entry<Object, ? extends ConfigurationNode> entry : childrenMap.entrySet())
         {
@@ -83,11 +86,20 @@ public class IslandManager {
         this.preLastIslandCreated = lastIslandsPosition[1];
     }
 
-    public void create(String schematic, Player player){
+    public boolean create(String schematic, Player player){
+
+
         Island is = islandsPresets.get(schematic);
         if(is == null){
             player.sendMessage(Text.of(TextColors.RED, "The schematic selected does not exist. Available schematics:"));
             islandsPresets.forEach((k,v) -> player.sendMessage(Text.of(TextColors.RED, k)));
+            return false;
+        }
+
+        IslandPlayer playerData = dataHolder.getPlayerData(player.getUniqueId());
+        if(!playerData.canHaveNewIsland( secondsBetweenIslands)){
+            player.sendMessage(Text.of(TextColors.RED, "You have to wait until you can create/join another island"));
+            return false;
         }
 
         //next position free
@@ -121,15 +133,15 @@ public class IslandManager {
         //TODO make the world configurable
         World world = Sponge.getServer().getWorld("world").get();
         Vector3i position = new Vector3i(newIslandPos.getX()*islandRadius*2,islandHeight,newIslandPos.getY()*islandRadius*2);
-        is.place(world,position,player);
+        if(is.place(world,position,player)==-1) return false;
         preLastIslandCreated=lastIslandCreated;
         lastIslandCreated=newIslandPos;
 
         //Tell to save the data
         dataHolder.newIsland(newIslandPos,position,player.getUniqueId());
         //dataHolder.uptdateIslandHome(player.getUniqueId(),position);
-        //TODO ban player during time to avoid continuously creating islands.
         plugin.getLogger().info("pasting schematic "+schematic+" into position ("+newIslandPos.getX()*islandRadius*2+"["+newIslandPos.getX()
                 +"],"+newIslandPos.getY()*islandRadius*2+"["+newIslandPos.getY()+"])");
+        return true;
     }
 }

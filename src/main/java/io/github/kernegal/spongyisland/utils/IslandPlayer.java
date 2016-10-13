@@ -3,6 +3,7 @@ package io.github.kernegal.spongyisland.utils;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
 
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -15,6 +16,7 @@ public class IslandPlayer {
     private Vector2i isPosition;
     private Vector3i isHome;
     private int island;
+    private long newIslandTime;
 
     public IslandPlayer(int id, UUID uuid, String name, Vector2i isPosition, Vector3i isHome, int island) {
         this.id = id;
@@ -63,11 +65,18 @@ public class IslandPlayer {
         this.isHome = isHome;
     }
 
-    public void setIsland(int island) {
+    public void setIsland(int island,Vector2i isPosition) {
         this.island = island;
+        this.isPosition = isPosition;
+        this.newIslandTime = System.currentTimeMillis();
     }
 
-    public void setIsPosition(Vector2i isPosition) {
+    /*public void setIsPosition(Vector2i isPosition) {
         this.isPosition = isPosition;
+    }*/
+
+    public boolean canHaveNewIsland(int waitIime){
+
+        return newIslandTime==0 || (System.currentTimeMillis()-newIslandTime)/1000>waitIime;
     }
 }

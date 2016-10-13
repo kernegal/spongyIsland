@@ -204,8 +204,8 @@ public class DataHolder {
                                 "        SET is_home_x="+worldPos.getX()+",is_home_y="+worldPos.getY()+",is_home_z="+worldPos.getZ()+",island='"+generatedKeys.getInt(1)+"'\n" +
                                 "        WHERE id="+players.get(player).getId()+";").execute();
                         players.get(player).setIsHome(worldPos);
-                        players.get(player).setIsland(generatedKeys.getInt(1));
-                        players.get(player).setIsPosition(gridPos);
+                        players.get(player).setIsland(generatedKeys.getInt(1),gridPos);
+                        //players.get(player).setIsPosition(gridPos);
                     }
                 }
             } finally {

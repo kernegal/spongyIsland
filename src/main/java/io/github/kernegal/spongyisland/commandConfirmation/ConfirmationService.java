@@ -21,7 +21,8 @@ public class ConfirmationService implements CommandExecutor {
     private String accept = "accept";
     private String cancel = "cancel";
     private String failString = "You don not have any pending requests";
-    private String newPetitionString = "write isconfirm "+accept+" or isconfirm "+cancel+" to accept or cancel the request";
+    private Text newPetitionString = Text.of("write",TextColors.GREEN, "/isconfirm ",accept,TextColors.NONE," or ",
+            TextColors.RED,"/isconfirm ",cancel,TextColors.NONE," to accept or cancel the request");
     public static final String argumentString = "response";
 
     public ConfirmationService() {
@@ -29,7 +30,7 @@ public class ConfirmationService implements CommandExecutor {
     }
 
     public void newPetition(CommandSource source, ConfirmationPetition petition){
-        source.sendMessage(Text.of(newPetitionString));
+        source.sendMessage(newPetitionString);
         requests.put(source,petition);
     }
 
