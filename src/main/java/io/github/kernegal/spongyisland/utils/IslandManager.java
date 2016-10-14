@@ -7,6 +7,8 @@ import io.github.kernegal.spongyisland.SpongyIsland;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.data.DataContainer;
+import org.spongepowered.api.data.key.Keys;
+import org.spongepowered.api.data.manipulator.mutable.entity.FoodData;
 import org.spongepowered.api.data.persistence.DataFormats;
 import org.spongepowered.api.data.persistence.DataTranslators;
 import org.spongepowered.api.entity.living.player.Player;
@@ -140,6 +142,13 @@ public class IslandManager {
         //Tell to save the data
         dataHolder.newIsland(newIslandPos,position,player.getUniqueId());
         //dataHolder.uptdateIslandHome(player.getUniqueId(),position);
+
+        player.getInventory().clear();
+        player.offer(Keys.HEALTH, player.get(Keys.MAX_HEALTH).get());
+        player.offer(Keys.FOOD_LEVEL,player.foodLevel().getDefault());
+        player.offer(Keys.SATURATION,player.saturation().getDefault());
+
+        //player.offer(Keys.SATURATION,player.get()
         plugin.getLogger().info("pasting schematic "+schematic+" into position ("+newIslandPos.getX()*islandRadius*2+"["+newIslandPos.getX()
                 +"],"+newIslandPos.getY()*islandRadius*2+"["+newIslandPos.getY()+"])");
         return true;
