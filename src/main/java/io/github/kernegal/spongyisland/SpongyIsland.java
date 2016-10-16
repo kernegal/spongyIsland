@@ -23,11 +23,10 @@ import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.text.Text;
 
 import java.io.*;
-import java.net.URL;
 
 /**
  * Created by kernegal on 02/10/2016.
- * Base class for SpongyIsland plugin
+ * Base class for SpongyIsland pluginContainer
  */
 @Plugin(id = SpongyIsland.pluginId, name = SpongyIsland.pluginName, version = SpongyIsland.version)
 public class SpongyIsland {
@@ -38,9 +37,9 @@ public class SpongyIsland {
     public static final String SchematicBedrockPosition = "bedrock_position";
 
 
-    @Inject private PluginContainer plugin;
-    public PluginContainer getPlugin() {
-        return plugin;
+    @Inject private PluginContainer pluginContainer;
+    public PluginContainer getPluginContainer() {
+        return pluginContainer;
     }
 
     @Inject
@@ -71,10 +70,15 @@ public class SpongyIsland {
         return logger;
     }
 
-
+    private static SpongyIsland plugin;
+    public static SpongyIsland getPlugin(){
+        return plugin;
+    }
 
     @Listener
     public void onPreInitialization(GamePreInitializationEvent event) {
+
+        plugin=this;
 
         if (!configDir.exists()) {
             configDir.mkdir();
@@ -153,10 +157,10 @@ public class SpongyIsland {
 
 
         getLogger().info("Preparing data");
-        data = new DataHolder(this);
+        data = new DataHolder();
         //Sponge.getEventManager().registerListeners(this, data);
 
-        isManager=new IslandManager(this,data,globalConfigNode);
+        isManager=new IslandManager(data,globalConfigNode);
 
         service = new ConfirmationService();
 
@@ -164,7 +168,7 @@ public class SpongyIsland {
 
         prepareCommands();
 
-        getLogger().info("sending some weird stuff to test my plugin");
+        getLogger().info("sending some weird stuff to test my pluginContainer");
         getLogger().info("SDASGdfHFDHGJSGJ SJ GJSGJ S JFJFGGSJGJGSJGJNSF \n" +
                 "SGJGFJFJD GS GJGSJ GF JGJ F \n" +
                 "SGJ S J GJ GSJ GJ   SJ SJ\n");
@@ -184,13 +188,13 @@ public class SpongyIsland {
         CommandSpec newIsCreateCommand =  CommandSpec.builder()
                 .description(Text.of("Create new island"))
                 .arguments(GenericArguments.string(Text.of("schematic")))
-                .executor(new IsCreate(this,isManager,data))
+                .executor(new IsCreate(isManager,data))
                 .build();
 
         //is home
         CommandSpec newIsHomeCommand =  CommandSpec.builder()
                 .description(Text.of("teleport to island"))
-                .executor(new IsHome(this,data))
+                .executor(new IsHome(data))
                 .build();
 
         //is sethome
@@ -198,13 +202,21 @@ public class SpongyIsland {
                 .description(Text.of("set your island home position"))
                 .executor(new IsSetHome(data,globalConfigNode.getNode("island","radius").getInt(),globalConfigNode.getNode("island","protectionRadius").getInt()))
                 .build();
+
+        //is level
+        CommandSpec newIsLevelCommand =  CommandSpec.builder()
+                .description(Text.of("Calcule your island level"))
+                .executor(new IsLevel(data,valuesConfigNode,globalConfigNode.getNode("island","radius").getInt(),globalConfigNode.getNode("island","protectionRadius").getInt()))
+                .build();
+
         //is
         CommandSpec newIslandCommand =  CommandSpec.builder()
                 .description(Text.of("list island commands"))
                 .child(newIsCreateCommand,"create","reset")
                 .child(newIsHomeCommand,"home", "h")
                 .child(newIsSetHomeCommand,"setHome", "sh")
-                .executor(new IslandCommand(this))
+                .child(newIsLevelCommand,"level", "l")
+                .executor(new IslandCommand())
                 .build();
 
         Sponge.getCommandManager().register(this, newIslandCommand, "island", "is");
@@ -222,13 +234,20 @@ public class SpongyIsland {
                         GenericArguments.integer(Text.of("y2")),
                         GenericArguments.integer(Text.of("z2"))
                 )
-                .executor(new IACreateSchematicCommand(this))
+                .executor(new IACreateSchematicCommand())
+                .build();
+
+        CommandSpec newValueCommand = CommandSpec.builder()
+                .description(Text.of("Creates a new schematic"))
+                .permission(SpongyIsland.pluginId+".command.values")
+                .executor(new IAShowBlockVariantsCommand())
                 .build();
 
         CommandSpec adminCommand = CommandSpec.builder()
                 .description(Text.of("list admin commands"))
                 .permission(SpongyIsland.pluginId+".command.admin")
                 .child(newSchematicCommand,"newSchematic","ns")
+                .child(newValueCommand,"newvalue", "nv")
                 .executor(new IslandAdminCommand(this))
                 .build();
 

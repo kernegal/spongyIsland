@@ -29,15 +29,13 @@ import java.util.zip.GZIPInputStream;
  */
 public class IslandManager {
     private Map<String,Island> islandsPresets;
-    private SpongyIsland plugin;
     private DataHolder dataHolder;
     private Vector2i lastIslandCreated, preLastIslandCreated;
     private int islandHeight;
     private int islandRadius;
     private int secondsBetweenIslands;
 
-    public IslandManager(SpongyIsland plugin, DataHolder dataHolder, ConfigurationNode configuration) {
-        this.plugin = plugin;
+    public IslandManager( DataHolder dataHolder, ConfigurationNode configuration) {
         this.dataHolder=dataHolder;
 
         ConfigurationNode islandNode = configuration.getNode("island");
@@ -58,9 +56,9 @@ public class IslandManager {
             //System.out.println(entry.getKey() + "/" + entry.getValue());
             //for(int i=0; i<childrenList.size(); i++){
             ConfigurationNode schematicNode = entry.getValue();
-            File schematicFile = new File(plugin.getSchematicsFolder(),schematicNode.getNode("filename").getString());
+            File schematicFile = new File(SpongyIsland.getPlugin().getSchematicsFolder(),schematicNode.getNode("filename").getString());
             if(!schematicFile.exists()){
-                plugin.getLogger().error("Schematic "+schematicFile.getPath()+" does not exist. Ignoring");
+                SpongyIsland.getPlugin().getLogger().error("Schematic "+schematicFile.getPath()+" does not exist. Ignoring");
                 continue;
             }
 
@@ -69,17 +67,17 @@ public class IslandManager {
                 schematicData = DataFormats.NBT.readFrom(new GZIPInputStream(new FileInputStream(schematicFile)));
             } catch (Exception e) {
                 e.printStackTrace();
-                plugin.getLogger().error("Error loading schematic: " + e.getMessage());
+                SpongyIsland.getPlugin().getLogger().error("Error loading schematic: " + e.getMessage());
                 continue;
             }
 
             Schematic schematic = DataTranslators.SCHEMATIC.translate(schematicData);
 
-            Island is= new Island(schematic,plugin,
+            Island is= new Island(schematic,
                     schematicNode.getNode("name").getString(),
                     schematicNode.getNode("description").getString());
             this.islandsPresets.put(schematicNode.getNode("schematic_name").getString(),is);
-            plugin.getLogger().info("Loaded schematic "+schematicNode.getNode("schematic_name").getString()+".");
+            SpongyIsland.getPlugin().getLogger().info("Loaded schematic "+schematicNode.getNode("schematic_name").getString()+".");
 
         }
 
@@ -149,7 +147,7 @@ public class IslandManager {
         player.offer(Keys.SATURATION,player.saturation().getDefault());
 
         //player.offer(Keys.SATURATION,player.get()
-        plugin.getLogger().info("pasting schematic "+schematic+" into position ("+newIslandPos.getX()*islandRadius*2+"["+newIslandPos.getX()
+        SpongyIsland.getPlugin().getLogger().info("pasting schematic "+schematic+" into position ("+newIslandPos.getX()*islandRadius*2+"["+newIslandPos.getX()
                 +"],"+newIslandPos.getY()*islandRadius*2+"["+newIslandPos.getY()+"])");
         return true;
     }

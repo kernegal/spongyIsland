@@ -2,10 +2,6 @@ package io.github.kernegal.spongyisland.commands;
 
 import com.flowpowered.math.vector.Vector3i;
 import io.github.kernegal.spongyisland.SpongyIsland;
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
-import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.command.CommandException;
@@ -24,26 +20,23 @@ import org.spongepowered.api.world.extent.ArchetypeVolume;
 import org.spongepowered.api.world.schematic.BlockPaletteTypes;
 import org.spongepowered.api.world.schematic.Schematic;
 
+import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.zip.GZIPOutputStream;
 
-/**
- * Created by kernegal on 07/10/2016.
- */
 public class IACreateSchematicCommand implements CommandExecutor {
-    private SpongyIsland plugin;
     private File schematicsFolder;
 
-    public IACreateSchematicCommand(SpongyIsland plugin) {
-        this.plugin=plugin;
-        this.schematicsFolder = plugin.getSchematicsFolder();
+    public IACreateSchematicCommand() {
+
+        this.schematicsFolder = SpongyIsland.getPlugin().getSchematicsFolder();
     }
 
 
     @Override
-    public CommandResult execute(CommandSource source, CommandContext args) throws CommandException {
+    @Nonnull
+    public CommandResult execute(@Nonnull CommandSource source, @Nonnull CommandContext args) throws CommandException {
         if (!(source instanceof Player)) {
             source.sendMessage(Text.of(TextColors.RED, "Player only."));
             return CommandResult.success();
@@ -94,7 +87,7 @@ public class IACreateSchematicCommand implements CommandExecutor {
             return CommandResult.success();
         }
 
-        plugin.getLogger().info("Creating schema");
+        SpongyIsland.getPlugin().getLogger().info("Creating schema");
         ArchetypeVolume volume = player.getWorld().createArchetypeVolume(min, max, bedRockPos);
 
         Schematic schematic = Schematic.builder()
@@ -110,7 +103,7 @@ public class IACreateSchematicCommand implements CommandExecutor {
             DataFormats.NBT.writeTo(new GZIPOutputStream(new FileOutputStream(schematicFile)), schematicData);
             player.sendMessage(Text.of(TextColors.GREEN, "Saved schematic to " + schematicFile.getAbsolutePath()));
         } catch (Exception e) {
-            plugin.getLogger().error(e.toString());
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
             player.sendMessage(Text.of(TextColors.DARK_RED, "Error saving schematic: " + e.getMessage()));
             return CommandResult.success();
         }

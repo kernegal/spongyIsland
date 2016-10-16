@@ -2,15 +2,10 @@ package io.github.kernegal.spongyisland.utils;
 
 import com.flowpowered.math.vector.Vector3i;
 import io.github.kernegal.spongyisland.SpongyIsland;
-import org.spongepowered.api.Sponge;
-import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.block.BlockState;
 import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.block.tileentity.TileEntity;
-import org.spongepowered.api.data.DataQuery;
-import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.manipulator.mutable.tileentity.SignData;
-import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.event.cause.NamedCause;
@@ -22,7 +17,6 @@ import org.spongepowered.api.world.World;
 import org.spongepowered.api.world.extent.ArchetypeVolume;
 import org.spongepowered.api.world.schematic.Schematic;
 
-import java.io.File;
 import java.util.Optional;
 
 /**
@@ -33,13 +27,11 @@ public class Island {
     private ArchetypeVolume volume;
     //private Vector3i bedrockPosition;
     private Vector3i signPosition;
-    private SpongyIsland plugin;
     private String name, description;
 
-    public Island(Schematic schematic, SpongyIsland plugin, String name, String description) {
+    public Island(Schematic schematic, String name, String description) {
         this.name=name;
         this.description=description;
-        this.plugin=plugin;
 
 
 
@@ -78,13 +70,13 @@ public class Island {
 
         //position = position.sub(bedrockPosition);
         volume.apply(new Location<>(world, position), BlockChangeFlag.ALL,
-                Cause.of(NamedCause.of("plugin", plugin.getPlugin())/*, NamedCause.source(player)*/));
+                Cause.of(NamedCause.of("plugin", SpongyIsland.getPlugin().getPluginContainer())/*, NamedCause.source(player)*/));
 
         if(signPosition!=null) {
             Location<World> signLocation = new Location<>(world, signPosition.add(position));
             Optional<TileEntity> signOptional = signLocation.getTileEntity();
 
-            plugin.getLogger().info(signPosition.toString());
+            SpongyIsland.getPlugin().getLogger().info(signPosition.toString());
             if (signOptional.isPresent()) {
                 TileEntity s = signOptional.get();
                 Optional<SignData> signDataOpt = s.get(SignData.class);

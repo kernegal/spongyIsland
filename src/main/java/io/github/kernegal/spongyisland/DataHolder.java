@@ -28,7 +28,6 @@ import static sun.audio.AudioPlayer.player;
  */
 public class DataHolder {
     private SqlService sql;
-    private SpongyIsland plugin;
     private static final String dbPath="./world/data/spongyisland";
     private String jdbcUrl;
     private Map<UUID, IslandPlayer> players;
@@ -40,13 +39,11 @@ public class DataHolder {
     /**
      * Constructor - initializes the state variables and create the db if necessary
      *
-     * @param plugin the plugin base object
      */
-    public DataHolder(SpongyIsland plugin) {
-        this.plugin=plugin;
+    public DataHolder() {
         Optional<SqlService> sqlOpt = Sponge.getServiceManager().provide(SqlService.class);
         if(!sqlOpt.isPresent()){
-            plugin.getLogger().error("An error occurred when  getting the sql service ");
+            SpongyIsland.getPlugin().getLogger().error("An error occurred when  getting the sql service ");
             //TODO exit properly
         }
         sql = sqlOpt.get();
@@ -57,7 +54,7 @@ public class DataHolder {
 
         if(!f.exists()) {
             try(Connection conn = getDataSource().getConnection()) {
-                plugin.getLogger().info("The database seems to not exist. Creating...");
+                SpongyIsland.getPlugin().getLogger().info("The database seems to not exist. Creating...");
                 try {
                     conn.prepareStatement("CREATE TABLE island(\n" +
                             "   id   INT              NOT NULL AUTO_INCREMENT,\n" +
@@ -90,7 +87,7 @@ public class DataHolder {
                     conn.close();
                 }
             } catch (SQLException e) {
-                plugin.getLogger().error(e.toString());
+                SpongyIsland.getPlugin().getLogger().error(e.toString());
             }
         }
         players = new HashMap<>();
@@ -107,7 +104,7 @@ public class DataHolder {
                         " ON player.island=island.id" +
                         " WHERE uuid='"+uuid+"';").executeQuery();
                 if (rs.next()) {
-                    plugin.getLogger().info("found player with name: "+rs.getString("name"));
+                    SpongyIsland.getPlugin().getLogger().info("found player with name: "+rs.getString("name"));
                     returnValue = new IslandPlayer(
                             rs.getInt("id"),
                             UUID.fromString(rs.getString("uuid")),
@@ -122,7 +119,7 @@ public class DataHolder {
                 conn.close();
             }
         } catch (SQLException e) {
-            plugin.getLogger().error(e.toString());
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
         }
 
         return returnValue;
@@ -144,7 +141,7 @@ public class DataHolder {
             }
 
         } catch (SQLException e) {
-            plugin.getLogger().error(e.toString());
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
         }
 
     }
@@ -163,7 +160,7 @@ public class DataHolder {
                 players.put(uuid,playerInfo);
             }
         }
-        plugin.getLogger().info("new player! uuid: "+playerInfo.getUuid()+" Name: "+playerInfo.getName());
+        SpongyIsland.getPlugin().getLogger().info("new player! uuid: "+playerInfo.getUuid()+" Name: "+playerInfo.getName());
 
     }
 
@@ -181,7 +178,7 @@ public class DataHolder {
                 conn.close();
             }
         } catch (SQLException e) {
-            plugin.getLogger().error(e.toString());
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
         }
 
         return res;
@@ -212,7 +209,7 @@ public class DataHolder {
                 conn.close();
             }
         } catch (SQLException e) {
-            plugin.getLogger().error(e.toString());
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
         }
     }
 
@@ -228,7 +225,7 @@ public class DataHolder {
                 conn.close();
             }
         } catch (SQLException e) {
-            plugin.getLogger().error(e.toString());
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
         }
 
     }
@@ -243,7 +240,7 @@ public class DataHolder {
         Vector3i playerHome = playerData.getIsHome();
         Location<World> worldLocation = Sponge.getServer().getWorld("world").get().getLocation(playerHome);
 
-        plugin.getLogger().info("Teleporting player "+player.getName()+" to "+playerHome);
+        SpongyIsland.getPlugin().getLogger().info("Teleporting player "+player.getName()+" to "+playerHome);
         Optional<Location<World>> safeLocation = Sponge.getGame().getTeleportHelper()
                 .getSafeLocation(worldLocation, 10, 20);
 

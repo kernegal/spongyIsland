@@ -14,24 +14,22 @@ import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 
-/**
- * Created by kernegal on 09/10/2016.
- */
+import javax.annotation.Nonnull;
+
 public class IsCreate implements CommandExecutor {
 
-    private SpongyIsland plugin;
     private IslandManager isManager;
     private DataHolder data;
 
 
-    public IsCreate(SpongyIsland plugin,IslandManager isManager,DataHolder data) {
+    public IsCreate(IslandManager isManager,DataHolder data) {
         this.isManager=isManager;
-        this.plugin = plugin;
         this.data=data;
     }
 
     @Override
-    public CommandResult execute(CommandSource source, CommandContext args) throws CommandException {
+    @Nonnull
+    public CommandResult execute(@Nonnull CommandSource source, @Nonnull CommandContext args) throws CommandException {
         //TODO check for player having no island
 
 
@@ -46,7 +44,7 @@ public class IsCreate implements CommandExecutor {
         IslandPlayer playerData = data.getPlayerData(player.getUniqueId());
         if(playerData.getIsland()!=-1){
             player.sendMessage(Text.of(TextColors.RED, "You already have an island. If you continue, your actual island will be lost forever"));
-            plugin.getService().newPetition(source, new ConfirmationPetition() {
+            SpongyIsland.getPlugin().getService().newPetition(source, new ConfirmationPetition() {
 
                 @Override
                 public void confirm(CommandSource source) {

@@ -1,6 +1,5 @@
 package io.github.kernegal.spongyisland.commandConfirmation;
 
-import org.slf4j.Logger;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -9,14 +8,13 @@ import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 
+import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-/**
- * Created by kernegal on 12/10/2016.
- */
+
 public class ConfirmationService implements CommandExecutor {
-    //private Logger logger;
     private Map<CommandSource,ConfirmationPetition> requests;
     private String accept = "accept";
     private String cancel = "cancel";
@@ -35,13 +33,19 @@ public class ConfirmationService implements CommandExecutor {
     }
 
     @Override
-    public CommandResult execute(CommandSource source, CommandContext args) throws CommandException {
+    @Nonnull
+    public CommandResult execute(@Nonnull CommandSource source, @Nonnull CommandContext args) throws CommandException {
         ConfirmationPetition pet=requests.get(source);
         if(pet==null){
             source.sendMessage(Text.of(failString));
         }
         else{
-            String s = args.<String>getOne(argumentString).get();
+            Optional<String> arg = args.getOne(argumentString);
+            if(!arg.isPresent()){
+                source.sendMessage(Text.of("no argument present"));
+                return CommandResult.success();
+            }
+            String s=arg.get();
 
             if(s.equals(accept)){
                 pet.confirm(source);
