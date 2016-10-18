@@ -1,3 +1,28 @@
+/*
+ * This file is part of the plugin SopngyIsland
+ *
+ * Copyright (c) 2016 kernegal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
+
 package io.github.kernegal.spongyisland;
 
 import com.flowpowered.math.vector.Vector2i;
@@ -5,6 +30,7 @@ import com.flowpowered.math.vector.Vector3i;
 import io.github.kernegal.spongyisland.utils.Island;
 import io.github.kernegal.spongyisland.utils.IslandPlayer;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.network.ClientConnectionEvent;
@@ -16,10 +42,7 @@ import org.spongepowered.api.world.World;
 
 import java.io.File;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static sun.audio.AudioPlayer.player;
 
@@ -62,7 +85,7 @@ public class DataHolder {
                             "   position_y  INT        NOT NULL,\n" +
                             "   level  INT            NOT NULL  DEFAULT '0',\n" +
                             "   name  CHAR (32) ,\n" +
-                            "   creator_id   INT,       \n" +
+                            "   creator_id INT (36),       \n" +
                             "   PRIMARY KEY (id)\n" +
                             ");").execute();
 
@@ -188,7 +211,7 @@ public class DataHolder {
         try(Connection conn = getDataSource().getConnection()) {
             try {
                 PreparedStatement statement =conn.prepareStatement("INSERT INTO island (position_x,position_y,creator_id)\n" +
-                        "VALUES ("+gridPos.getX()+","+gridPos.getY()+","+players.get(player).getId()+");",
+                        "VALUES ("+gridPos.getX()+","+gridPos.getY()+",'"+players.get(player).getId()+"');",
                         Statement.RETURN_GENERATED_KEYS);
 
                 int affectedRows=statement.executeUpdate();
@@ -251,8 +274,56 @@ public class DataHolder {
             player.sendMessage(Text.of(TextColors.DARK_RED,"Island not secure"));
 
     }
+
     public final IslandPlayer getPlayerData(UUID uuid){
         return players.get(uuid);
 
+    }
+
+    public void updateIslandLevel(UUID uuid, int level){
+        try(Connection conn = getDataSource().getConnection()) {
+            try {
+                conn.prepareStatement("UPDATE island\n" +
+                        "        SET level="+level+"\n" +
+                        "        WHERE id="+players.get(uuid).getIsland()+";").execute();
+
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
+        }
+
+    }
+
+    public void listTopIslands(int number, CommandSource destination){
+        destination.sendMessage(Text.of("Top "+number+" islands:"));
+        try(Connection conn = getDataSource().getConnection()) {
+            try {
+                ResultSet rs  = conn.prepareStatement(
+                        "SELECT island.id,island.name as island_name,island.level,c.name as player_name,count(player.id) as num_players " +
+                        "FROM island " +
+                        "JOIN player ON player.island=island.id " +
+                        "JOIN player AS c ON c.id=island.creator_id " +
+                        "GROUP BY island.id " +
+                        "ORDER BY level " +
+                        "DESC LIMIT "+number+";"
+                    ).executeQuery();
+                while (rs.next()) {
+                    String name = rs.getString("island_name");
+                    if(name==name){
+
+                        destination.sendMessage(Text.of("Island of "+rs.getString("player_name")+": ",TextColors.AQUA,rs.getInt("level"),TextColors.NONE," ["+rs.getInt("num_players")+" players]"));
+                    }
+                    else{
+                        destination.sendMessage(Text.of(name+": "+rs.getInt("level")+"["+rs.getInt("num_players")+" players]"));
+                    }
+                }
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
+        }
     }
 }

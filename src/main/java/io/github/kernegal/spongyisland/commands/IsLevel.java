@@ -1,3 +1,28 @@
+/*
+ * This file is part of the plugin SopngyIsland
+ *
+ * Copyright (c) 2016 kernegal
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
+
 package io.github.kernegal.spongyisland.commands;
 
 import com.flowpowered.math.vector.Vector2i;
@@ -34,12 +59,14 @@ public class IsLevel implements CommandExecutor {
     DataHolder data;
     ConfigurationNode values;
     int islandRadius, protectionRadius;
+    int pointsPerLevel;
 
-    public IsLevel(DataHolder data, ConfigurationNode values, int islandRadius, int protectionRadius) {
+    public IsLevel(DataHolder data, ConfigurationNode values, int islandRadius, int protectionRadius, int pointsPerLevel) {
         this.data = data;
         this.values = values;
         this.islandRadius = islandRadius;
         this.protectionRadius = protectionRadius;
+        this.pointsPerLevel = pointsPerLevel;
     }
 
     @Override
@@ -51,6 +78,12 @@ public class IsLevel implements CommandExecutor {
         }
         Player player = (Player) source;
         IslandPlayer playerData = data.getPlayerData(player.getUniqueId());
+
+        if(playerData.getIsland()==-1){
+            player.sendMessage(Text.of(TextColors.DARK_RED,"You need an island"));
+            return CommandResult.success();
+        }
+
         Vector2i islandCoordinates=playerData.getIsPosition().mul(islandRadius*2);
 
         Vector2i min2 = islandCoordinates.sub(protectionRadius,protectionRadius);
@@ -69,8 +102,9 @@ public class IsLevel implements CommandExecutor {
                 ,
                 (a, b) -> a + b,
                 0);
-        player.sendMessage(Text.of("Level: " + sum));
-
+        sum/=pointsPerLevel;
+        player.sendMessage(Text.of("Level: ",TextColors.AQUA, sum));
+        data.updateIslandLevel(player.getUniqueId(),sum);
         return CommandResult.success();
     }
 
