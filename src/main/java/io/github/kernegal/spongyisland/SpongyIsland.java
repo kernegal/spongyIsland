@@ -279,11 +279,18 @@ public class SpongyIsland {
                 .executor(new IAShowBlockVariantsCommand())
                 .build();
 
+        CommandSpec unlinkIslandCommand = CommandSpec.builder()
+                .description(Text.of("Makes the island to not have an owner and marks it to avoid being deleted"))
+                .permission(SpongyIsland.pluginId+".command.unlink")
+                .executor(new IAUnlinkIsland(data))
+                .build();
+
         CommandSpec adminCommand = CommandSpec.builder()
                 .description(Text.of("list admin commands"))
                 .permission(SpongyIsland.pluginId+".command.admin")
                 .child(newSchematicCommand,"newSchematic","ns")
                 .child(newValueCommand,"newvalue", "nv")
+                .child(unlinkIslandCommand,"unlink")
                 .executor(new IslandAdminCommand())
                 .build();
 

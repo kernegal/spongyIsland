@@ -28,6 +28,7 @@ package io.github.kernegal.spongyisland;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
 import io.github.kernegal.spongyisland.utils.IslandPlayer;
+import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.data.Transaction;
 import org.spongepowered.api.entity.living.player.Player;
@@ -39,11 +40,14 @@ import org.spongepowered.api.event.filter.Getter;
 import org.spongepowered.api.event.filter.IsCancelled;
 import org.spongepowered.api.event.filter.cause.First;
 import org.spongepowered.api.event.filter.cause.Root;
+import org.spongepowered.api.event.filter.type.Exclude;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.util.Tristate;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
+
+import java.util.Optional;
 
 /**
  * Created by kernegal on 12/10/2016.
@@ -62,13 +66,15 @@ public class IslandProtection {
     @Listener
     @IsCancelled(Tristate.FALSE)
     public void blockPlaceEvent(ChangeBlockEvent.Place event, @Root Player player) {
-        //logger.info("Only filtering when the root is a player and the event is a Place!");
+        if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
+            return;
+        }
+        if(!event.getTargetWorld().getName().equals("world")){
+            return;
+        }
         IslandPlayer playerData = data.getPlayerData(player.getUniqueId());
-
         if (playerData.getIsland() != -1 ) {
-            if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
-                return;
-            }
+
             for(Transaction<BlockSnapshot> trans : event.getTransactions()) {
                 trans.getOriginal().getLocation().ifPresent(location -> {
                     Vector2i islandCoordinates = playerData.getIsPosition().mul(islandRadius * 2);
@@ -93,13 +99,15 @@ public class IslandProtection {
     @Listener
     @IsCancelled(Tristate.FALSE)
     public void blockBreakEvent(ChangeBlockEvent.Break event, @Root Player player) {
-        //logger.info("Only filtering when the root is a player and the event is a Break!");
-        // do stuff
+        if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
+            return;
+        }
+        if(!event.getTargetWorld().getName().equals("world")){
+            return;
+        }
         IslandPlayer playerData = data.getPlayerData(player.getUniqueId());
         if (playerData.getIsland() != -1 ) {
-            if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
-                return;
-            }
+
             for(Transaction<BlockSnapshot> trans : event.getTransactions()) {
                 trans.getOriginal().getLocation().ifPresent(location -> {
                     Vector2i islandCoordinates = playerData.getIsPosition().mul(islandRadius * 2);
@@ -122,14 +130,18 @@ public class IslandProtection {
     }
 
     @Listener
+    @Exclude(InteractBlockEvent.Primary.class)
     public void onInteract(InteractBlockEvent event, @First Player player) {
-        //logger.info("Only filtering when the root is a player and the event is a Break!");
-        // do stuff
+        if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
+            return;
+        }
+        Optional<World> world = Sponge.getServer().getWorld(event.getTargetBlock().getWorldUniqueId());
+        if(!world.isPresent() || !world.get().getName().equals("world")){
+            return;
+        }
         IslandPlayer playerData = data.getPlayerData(player.getUniqueId());
         if (playerData.getIsland() != -1 ) {
-            if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
-                return;
-            }
+
             Vector3i location =  event.getTargetBlock().getPosition().toInt();
             Vector2i islandCoordinates = playerData.getIsPosition().mul(islandRadius * 2);
             Vector2i min = islandCoordinates.sub(protectionRadius, protectionRadius);
@@ -144,11 +156,13 @@ public class IslandProtection {
             event.setCancelled(true);
         }
     }
+
     @Listener
+    @Exclude(MoveEntityEvent.Teleport.class)
     public void onEvent(MoveEntityEvent event, @Getter("getTargetEntity") Player player) {
         IslandPlayer playerData = data.getPlayerData(player.getUniqueId());
 
-        if (playerData.getIsland()!=-1){
+        if (playerData.getIsland()!=-1 && !event.getFromTransform().getExtent().getName().equals("world")){
             Vector2i islandCoordinates=playerData.getIsPosition().mul(islandRadius*2);
             Vector2i min = islandCoordinates.sub(protectionRadius,protectionRadius);
             Vector2i max = islandCoordinates.add(protectionRadius,protectionRadius);

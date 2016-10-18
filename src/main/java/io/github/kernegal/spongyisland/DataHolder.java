@@ -27,13 +27,10 @@ package io.github.kernegal.spongyisland;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
-import io.github.kernegal.spongyisland.utils.Island;
 import io.github.kernegal.spongyisland.utils.IslandPlayer;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.entity.living.player.Player;
-import org.spongepowered.api.event.Listener;
-import org.spongepowered.api.event.network.ClientConnectionEvent;
 import org.spongepowered.api.service.sql.SqlService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
@@ -44,7 +41,6 @@ import java.io.File;
 import java.sql.*;
 import java.util.*;
 
-import static sun.audio.AudioPlayer.player;
 
 /**
  * Created by kernegal on 04/10/2016.
@@ -85,19 +81,20 @@ public class DataHolder {
                             "   position_y  INT        NOT NULL,\n" +
                             "   level  INT            NOT NULL  DEFAULT '0',\n" +
                             "   name  CHAR (32) ,\n" +
+                            "   special  BOOLEAN ,\n" +
                             "   creator_id INT (36),       \n" +
                             "   PRIMARY KEY (id)\n" +
                             ");").execute();
 
                     conn.prepareStatement("CREATE TABLE player(\n" +
                             "   id   INT              NOT NULL AUTO_INCREMENT,\n" +
-                            "   uuid CHAR (36)         NOT NULL,\n" +
+                            "   uuid CHAR (36)        NOT NULL,\n" +
                             "   name  CHAR (32)       NOT NULL,\n" +
                             "   is_home_x  INT,\n" +
                             "   is_home_y  INT,\n" +
                             "   is_home_z  INT,\n" +
                             "   lt_create  SMALLDATETIME,\n" +
-                            "   island INT,       \n" +
+                            "   island INT            DEFAULT '-1',       \n" +
                             "   PRIMARY KEY (id)\n" +
                             ");").execute();
                     conn.prepareStatement("CREATE TABLE completed(\n" +
@@ -325,5 +322,29 @@ public class DataHolder {
         } catch (SQLException e) {
             SpongyIsland.getPlugin().getLogger().error(e.toString());
         }
+    }
+
+    public void markIslandAsSpecial(UUID uuid){
+        try(Connection conn = getDataSource().getConnection()) {
+            try {
+
+                conn.prepareStatement("UPDATE island\n" +
+                        "        SET " +
+                        "        special=TRUE " +
+                        "        WHERE id="+players.get(uuid).getIsland()+";").execute();
+                conn.prepareStatement("UPDATE player\n" +
+                        "        SET " +
+                        "        island=-1 " +
+                        "        WHERE id="+players.get(uuid).getId()+";").execute();
+                players.get(uuid).setIsland(-1,null);
+                //players.get(player).setIsPosition(gridPos);
+
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
+        }
+
     }
 }
