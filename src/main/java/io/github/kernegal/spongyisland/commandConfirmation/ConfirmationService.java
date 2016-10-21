@@ -31,6 +31,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.format.TextColors;
 
 import javax.annotation.Nonnull;
@@ -41,15 +42,22 @@ import java.util.Optional;
 
 public class ConfirmationService implements CommandExecutor {
     private Map<CommandSource,ConfirmationPetition> requests;
-    private String accept = "accept";
-    private String cancel = "cancel";
-    private String failString = "You don not have any pending requests";
-    private Text newPetitionString = Text.of("write",TextColors.GREEN, "/isconfirm ",accept,TextColors.NONE," or ",
-            TextColors.RED,"/isconfirm ",cancel,TextColors.NONE," to accept or cancel the request");
+    private String accept;
+    private String cancel;
+    private String failString;
+    private Text newPetitionString;
     public static final String argumentString = "response";
 
     public ConfirmationService() {
         requests = new HashMap<>();
+        accept = "accept";
+        cancel = "cancel";
+        Text acceptCommand = Text.builder("/isconfirm "+accept).color(TextColors.GREEN).onClick(TextActions.runCommand("/isconfirm "+accept)).build();
+        Text cancelCommand = Text.builder("/isconfirm "+cancel).color(TextColors.RED).onClick(TextActions.runCommand("/isconfirm "+cancel)).build();
+        newPetitionString = Text.of("write (or click in the commands) ", acceptCommand, " or ",
+                cancelCommand, " to accept or cancel the request");
+
+        failString = "You don not have any pending requests";
     }
 
     public void newPetition(CommandSource source, ConfirmationPetition petition){

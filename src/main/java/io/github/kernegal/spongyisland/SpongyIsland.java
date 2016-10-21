@@ -43,8 +43,10 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.network.ClientConnectionEvent;
+import org.spongepowered.api.event.service.ChangeServiceProviderEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.plugin.PluginContainer;
+import org.spongepowered.api.service.economy.EconomyService;
 import org.spongepowered.api.text.Text;
 
 import java.io.*;
@@ -56,7 +58,7 @@ import java.io.*;
 @Plugin(id = SpongyIsland.pluginId, name = SpongyIsland.pluginName, version = SpongyIsland.version)
 public class SpongyIsland {
 
-    public static final String version="0.1.0";
+    public static final String version="0.2.0";
     public static final String pluginId="spongyisland";
     public static final String pluginName="Spongy Island";
     public static final String SchematicBedrockPosition = "bedrock_position";
@@ -89,6 +91,8 @@ public class SpongyIsland {
     private CommentedConfigurationNode globalConfigNode;
     private CommentedConfigurationNode challengesConfigNode;
     private CommentedConfigurationNode valuesConfigNode;
+    private CommentedConfigurationNode biomeShopConfigNode;
+
     public File getConfigPath() { return this.configDir; }
     public File getSchematicsFolder() { return schematicsFolder; }
     public Logger getLogger() {
@@ -98,6 +102,19 @@ public class SpongyIsland {
     private static SpongyIsland plugin;
     public static SpongyIsland getPlugin(){
         return plugin;
+    }
+
+    private EconomyService economyService;
+
+    public EconomyService getEconomyService(){
+        return economyService;
+    }
+
+    @Listener
+    public void onChangeServiceProvider(ChangeServiceProviderEvent event) {
+        if (event.getService().equals(EconomyService.class)) {
+            economyService = (EconomyService) event.getNewProviderRegistration().getProvider();
+        }
     }
 
     @Listener
@@ -144,6 +161,10 @@ public class SpongyIsland {
         File valuesConfig = new File(configDir, "blockvalues.conf");
         ConfigurationLoader<CommentedConfigurationNode> valuesConfigManager =
                 HoconConfigurationLoader.builder().setFile(valuesConfig).build();
+
+        File biomeShopConfig = new File(configDir, "biomeshop.conf");
+        ConfigurationLoader<CommentedConfigurationNode> biomeShopConfigManager =
+                HoconConfigurationLoader.builder().setFile(biomeShopConfig).build();
         try {
             if(!globalConfig.exists()){
                 globalConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/config.conf")).build().load();
@@ -167,6 +188,15 @@ public class SpongyIsland {
             }
             else{
                 valuesConfigNode = valuesConfigManager.load();
+
+            }
+
+            if(!biomeShopConfig.exists()) {
+                biomeShopConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/biomeshop.conf")).build().load();
+                biomeShopConfigManager.save(biomeShopConfigNode);
+            }
+            else{
+                biomeShopConfigNode = biomeShopConfigManager.load();
 
             }
 
@@ -244,6 +274,18 @@ public class SpongyIsland {
                 .executor(new TopCommand(data))
                 .build();
 
+        //is biomeShop
+        CommandSpec isBiomeShopCommand =  CommandSpec.builder()
+                .description(Text.of("show top islands"))
+                .arguments(GenericArguments.optional(GenericArguments.string(Text.of("biome"))))
+                .executor(new IBiomeShop(
+                        data,
+                        globalConfigNode.getNode("island","radius").getInt(),
+                        biomeShopConfigNode,
+                        globalConfigNode.getNode("general","economy").getBoolean(true)
+                ))
+                .build();
+
         //is
         CommandSpec newIslandCommand =  CommandSpec.builder()
                 .description(Text.of("list island commands"))
@@ -252,6 +294,7 @@ public class SpongyIsland {
                 .child(newIsSetHomeCommand,"setHome", "sh")
                 .child(newIsLevelCommand,"level", "l")
                 .child(topIslandCommand,"top")
+                .child(isBiomeShopCommand,"biomeshop")
                 .executor(new IslandCommand())
                 .build();
 

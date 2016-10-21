@@ -27,6 +27,7 @@ package io.github.kernegal.spongyisland;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
+import io.github.kernegal.spongyisland.utils.Island;
 import io.github.kernegal.spongyisland.utils.IslandPlayer;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockSnapshot;
@@ -45,6 +46,7 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.util.Tristate;
 import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.PortalAgent;
 import org.spongepowered.api.world.World;
 
 import java.util.Optional;
@@ -158,11 +160,11 @@ public class IslandProtection {
     }
 
     @Listener
-    @Exclude(MoveEntityEvent.Teleport.class)
+    @Exclude({MoveEntityEvent.Teleport.class,MoveEntityEvent.Teleport.Portal.class})
     public void onEvent(MoveEntityEvent event, @Getter("getTargetEntity") Player player) {
         IslandPlayer playerData = data.getPlayerData(player.getUniqueId());
 
-        if (playerData.getIsland()!=-1 && !event.getFromTransform().getExtent().getName().equals("world")){
+        if (playerData.getIsland()!=-1 && event.getFromTransform().getExtent().getName().equals("world")){
             Vector2i islandCoordinates=playerData.getIsPosition().mul(islandRadius*2);
             Vector2i min = islandCoordinates.sub(protectionRadius,protectionRadius);
             Vector2i max = islandCoordinates.add(protectionRadius,protectionRadius);
@@ -189,5 +191,27 @@ public class IslandProtection {
         }
     }
 
+    @Listener
+    public void onPortalTP(MoveEntityEvent.Teleport.Portal event, @Getter("getTargetEntity") Player player) {
+        SpongyIsland.getPlugin().getLogger().info(event.getFromTransform().getExtent().getName());
+
+        if(event.getFromTransform().getExtent().getName().equals("DIM-1")){
+            event.setCancelled(true);
+            player.sendMessage(Text.of("Use island command to get to your island or create a new one"));
+
+        }
+        else if(event.getToTransform().getExtent().getName().equals("DIM-1")){
+            PortalAgent portalAgent = event.getPortalAgent();
+            Optional<Location<World>> orCreatePortal = portalAgent.findOrCreatePortal(event.getToTransform().getExtent().getLocation(0, 0, 0));
+            if(orCreatePortal.isPresent()){
+                event.setToTransform(event.getToTransform().setLocation(orCreatePortal.get()));
+            }
+            else{
+                player.sendMessage(Text.of(TextColors.DARK_RED,"Can't go to Nether"));
+                event.setCancelled(true);
+            }
+
+        }
+    }
 
 }
