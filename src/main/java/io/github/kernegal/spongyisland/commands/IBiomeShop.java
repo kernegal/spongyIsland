@@ -43,8 +43,12 @@ import org.spongepowered.api.service.economy.EconomyService;
 import org.spongepowered.api.service.economy.account.UniqueAccount;
 import org.spongepowered.api.service.economy.transaction.ResultType;
 import org.spongepowered.api.service.economy.transaction.TransactionResult;
+import org.spongepowered.api.text.BookView;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.text.format.TextFormat;
+import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.world.World;
 import org.spongepowered.api.world.biome.BiomeType;
 import org.spongepowered.api.world.biome.BiomeTypes;
@@ -57,6 +61,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class IBiomeShop implements CommandExecutor {
+    public static final String commandName="biomeshop";
     private DataHolder data;
     private int islandRadius;
     private ConfigurationNode biomesValues;
@@ -100,7 +105,9 @@ public class IBiomeShop implements CommandExecutor {
         Extent view = world.get().getExtentView(min, max);
         Optional<String> opBiome = args.<String>getOne("biome");
         if(!opBiome.isPresent()){
-            printBiomes(player);
+
+            player.sendBookView(getBiomeBookView());
+            //printBiomes(player);
             return CommandResult.success();
         }
         String biomeStr=opBiome.get();
@@ -152,6 +159,47 @@ public class IBiomeShop implements CommandExecutor {
         for(Map.Entry<Object, ? extends ConfigurationNode> entry : biomesValues.getChildrenMap().entrySet()) {
             player.sendMessage(Text.of(entry.getKey()));
         }
+    }
+    private BookView getBiomeBookView(){
+        BookView.Builder bookView = BookView.builder()
+                .title(Text.of("Biome Shop"))
+                .author(Text.of("SpongyIsland"));
+
+        Text page=Text.EMPTY;
+        final int charPerRow=20;
+        final int linesPerPage=14;
+        int actualLines=0;
+        for(Map.Entry<Object, ? extends ConfigurationNode> entry : biomesValues.getChildrenMap().entrySet()) {
+            String biomeNameStr = entry.getValue().getNode("friendly_name").getString("");
+            Text biomeName = Text.builder(biomeNameStr)
+                    .color(TextColors.DARK_BLUE)
+                    .style(TextStyles.UNDERLINE)
+                    .onClick(TextActions.runCommand("/is "+commandName+" "+entry.getKey()))
+                    .build();
+            String biomeDescriptionStr = entry.getValue().getNode("description").getString("");
+            Text biomeDescription = Text.builder(biomeDescriptionStr).build();
+            String biomeCostStr = entry.getValue().getNode("cost").getString("");
+            Text biomeCost = Text.builder("Value: "+biomeCostStr).build();
+            int numLines = biomeNameStr.length()/charPerRow+biomeDescriptionStr.length()/charPerRow+3;
+            if(actualLines+numLines>linesPerPage && actualLines!=0){
+
+                bookView.addPage(page);
+                page=Text.EMPTY;
+                actualLines=0;
+            }
+
+            page = Text.of(page, Text.NEW_LINE,
+                    biomeName, Text.NEW_LINE,
+                    biomeDescription, Text.NEW_LINE,
+                    biomeCost, Text.NEW_LINE);
+            actualLines+=numLines+1;
+
+        }
+        bookView.addPage(page);
+
+
+        return bookView.build();
+
     }
 
     private BiomeType getBiomeFromText(String biome){

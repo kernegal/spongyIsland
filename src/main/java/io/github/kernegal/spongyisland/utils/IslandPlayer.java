@@ -28,12 +28,9 @@ package io.github.kernegal.spongyisland.utils;
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
 
-import java.util.Date;
 import java.util.UUID;
 
-/**
- * Created by kernegal on 10/10/2016.
- */
+
 public class IslandPlayer {
     private int id;
     private UUID uuid;
@@ -41,7 +38,7 @@ public class IslandPlayer {
     private Vector2i isPosition;
     private Vector3i isHome;
     private int island;
-    private long newIslandTime;
+    private long newIslandTime,newLevelTime;
 
     public IslandPlayer(int id, UUID uuid, String name, Vector2i isPosition, Vector3i isHome, int island) {
         this.id = id;
@@ -96,12 +93,19 @@ public class IslandPlayer {
         this.newIslandTime = System.currentTimeMillis();
     }
 
+    public void setNewLevelTime(){
+        this.newLevelTime = System.currentTimeMillis();
+    }
     /*public void setIsPosition(Vector2i isPosition) {
         this.isPosition = isPosition;
     }*/
 
-    public boolean canHaveNewIsland(int waitIime){
+    public boolean canHaveNewIsland(int waitTime){
 
-        return newIslandTime==0 || (System.currentTimeMillis()-newIslandTime)/1000>waitIime;
+        return newIslandTime==0 || (System.currentTimeMillis()-newIslandTime)/1000>waitTime;
+    }
+
+    public boolean canCalculateIslanLevel(int waitTime){
+        return newLevelTime==0 || (System.currentTimeMillis()-newLevelTime)/1000>waitTime;
     }
 }

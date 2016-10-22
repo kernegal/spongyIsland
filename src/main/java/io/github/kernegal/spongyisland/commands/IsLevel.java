@@ -60,13 +60,15 @@ public class IsLevel implements CommandExecutor {
     ConfigurationNode values;
     int islandRadius, protectionRadius;
     int pointsPerLevel;
+    int waitTime;
 
-    public IsLevel(DataHolder data, ConfigurationNode values, int islandRadius, int protectionRadius, int pointsPerLevel) {
+    public IsLevel(DataHolder data, ConfigurationNode values, int islandRadius, int protectionRadius, int pointsPerLevel, int waitTime) {
         this.data = data;
         this.values = values;
         this.islandRadius = islandRadius;
         this.protectionRadius = protectionRadius;
         this.pointsPerLevel = pointsPerLevel;
+        this.waitTime=waitTime;
     }
 
     @Override
@@ -84,6 +86,10 @@ public class IsLevel implements CommandExecutor {
             return CommandResult.success();
         }
 
+        if(!playerData.canCalculateIslanLevel(waitTime)){
+            player.sendMessage(Text.of(TextColors.DARK_RED,"You need to wait "+waitTime+"seconds between level calculations"));
+            return CommandResult.success();
+        }
         Vector2i islandCoordinates=playerData.getIsPosition().mul(islandRadius*2);
 
         Vector2i min2 = islandCoordinates.sub(protectionRadius,protectionRadius);
@@ -103,6 +109,7 @@ public class IsLevel implements CommandExecutor {
                 (a, b) -> a + b,
                 0);
         sum/=pointsPerLevel;
+        playerData.setNewLevelTime();
         player.sendMessage(Text.of("Level: ",TextColors.AQUA, sum));
         data.updateIslandLevel(player.getUniqueId(),sum);
         return CommandResult.success();

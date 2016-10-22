@@ -58,7 +58,7 @@ import java.io.*;
 @Plugin(id = SpongyIsland.pluginId, name = SpongyIsland.pluginName, version = SpongyIsland.version)
 public class SpongyIsland {
 
-    public static final String version="0.2.0";
+    public static final String version="0.2.1";
     public static final String pluginId="spongyisland";
     public static final String pluginName="Spongy Island";
     public static final String SchematicBedrockPosition = "bedrock_position";
@@ -265,7 +265,8 @@ public class SpongyIsland {
                         valuesConfigNode,
                         globalConfigNode.getNode("island","radius").getInt(),
                         globalConfigNode.getNode("island","protectionRadius").getInt(),
-                        100))
+                        100,
+                        globalConfigNode.getNode("general","level_wait").getInt()))
                 .build();
 
         //is top
@@ -294,7 +295,7 @@ public class SpongyIsland {
                 .child(newIsSetHomeCommand,"setHome", "sh")
                 .child(newIsLevelCommand,"level", "l")
                 .child(topIslandCommand,"top")
-                .child(isBiomeShopCommand,"biomeshop")
+                .child(isBiomeShopCommand,IBiomeShop.commandName)
                 .executor(new IslandCommand())
                 .build();
 
