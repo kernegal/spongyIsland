@@ -39,6 +39,7 @@ import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.world.BlockChangeFlag;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
+import org.spongepowered.api.world.biome.BiomeType;
 import org.spongepowered.api.world.extent.ArchetypeVolume;
 import org.spongepowered.api.world.schematic.Schematic;
 
@@ -53,12 +54,11 @@ public class Island {
     //private Vector3i bedrockPosition;
     private Vector3i signPosition;
     private String name, description;
+    private BiomeType biome;
 
-    public Island(Schematic schematic, String name, String description) {
+    public Island(Schematic schematic, String name, String description, BiomeType biome) {
         this.name=name;
         this.description=description;
-
-
 
         Vector3i min=schematic.getBlockMin(),max=schematic.getBlockMax();
 
@@ -77,6 +77,7 @@ public class Island {
             }
         }
         volume = schematic;
+        this.biome=biome;
         //bedrockPosition = new Vector3i((Vector3i) schematic.getMetadata().get(DataQuery.of(SpongyIsland.SchematicBedrockPosition)).get());
     }
 
@@ -119,5 +120,9 @@ public class Island {
         return 0;
 
 
+    }
+
+    public BiomeType getBiome() {
+        return biome;
     }
 }

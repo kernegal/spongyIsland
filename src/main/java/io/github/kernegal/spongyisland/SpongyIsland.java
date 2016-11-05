@@ -55,12 +55,16 @@ import java.io.*;
  * Created by kernegal on 02/10/2016.
  * Base class for SpongyIsland pluginContainer
  */
-@Plugin(id = SpongyIsland.pluginId, name = SpongyIsland.pluginName, version = SpongyIsland.version)
+@Plugin(id = SpongyIsland.pluginId,
+        name = SpongyIsland.pluginName,
+        version = SpongyIsland.version,
+        description = SpongyIsland.pluginDescription)
 public class SpongyIsland {
 
-    public static final String version="0.2.1";
+    public static final String version="0.3.0";
     public static final String pluginId="spongyisland";
     public static final String pluginName="Spongy Island";
+    public static final String pluginDescription="A skyblock plugin for sponge";
     public static final String SchematicBedrockPosition = "bedrock_position";
 
 
@@ -212,7 +216,7 @@ public class SpongyIsland {
 
 
         getLogger().info("Preparing data");
-        data = new DataHolder();
+        data = new DataHolder(challengesConfigNode,globalConfigNode);
         //Sponge.getEventManager().registerListeners(this, data);
 
         isManager=new IslandManager(data,globalConfigNode);
@@ -300,6 +304,29 @@ public class SpongyIsland {
                 .build();
 
         Sponge.getCommandManager().register(this, newIslandCommand, "island", "is");
+
+        //challenges
+        CommandSpec completeChallengeCommand =  CommandSpec.builder()
+                .description(Text.of("show challenges"))
+                .arguments(
+                        GenericArguments.string(Text.of(CComplete.argChallenge)),
+                        GenericArguments.optional(GenericArguments.integer(Text.of(CComplete.argTimes)))
+                )
+                .executor(new CComplete(data))
+                .build();
+
+        CommandSpec challengesCommand =  CommandSpec.builder()
+                .description(Text.of("show challenges"))
+                .arguments(GenericArguments.optional(GenericArguments.string(Text.of(ChallengesCommand.argsName))))
+                .executor(new ChallengesCommand(
+                        challengesConfigNode,
+                        data
+                ))
+                .child(completeChallengeCommand,CComplete.commandName,""+CComplete.commandName.charAt(0))
+                .build();
+
+        Sponge.getCommandManager().register(this, challengesCommand, ChallengesCommand.commandName, ""+ChallengesCommand.commandName.charAt(0) );
+        //Sponge.getCommandManager().register(this, completeChallengeCommand, "completeChallenge", "cc");
 
         //Admin commands
         CommandSpec newSchematicCommand = CommandSpec.builder()

@@ -29,6 +29,7 @@ import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
 import io.github.kernegal.spongyisland.DataHolder;
 import io.github.kernegal.spongyisland.SpongyIsland;
+import io.github.kernegal.spongyisland.utils.IslandManager;
 import io.github.kernegal.spongyisland.utils.IslandPlayer;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.api.Sponge;
@@ -111,7 +112,7 @@ public class IBiomeShop implements CommandExecutor {
             return CommandResult.success();
         }
         String biomeStr=opBiome.get();
-        BiomeType biome=getBiomeFromText(biomeStr);
+        BiomeType biome= IslandManager.getBiomeFromText(biomeStr);
         if(biome==null){
             player.sendMessage(Text.of(TextColors.DARK_RED,"biome not valid"));
             return CommandResult.success();
@@ -202,101 +203,5 @@ public class IBiomeShop implements CommandExecutor {
 
     }
 
-    private BiomeType getBiomeFromText(String biome){
-        biome=biome.toLowerCase();
 
-        switch (biome) {
-            case "beach":
-                return BiomeTypes.BEACH;
-
-            case "birch_forest":
-                return BiomeTypes.BIRCH_FOREST;
-
-            case "cold_taiga":
-                return BiomeTypes.COLD_TAIGA;
-
-            case "deep_ocean":
-                return BiomeTypes.DEEP_OCEAN;
-
-            case "desert":
-                return BiomeTypes.DESERT;
-
-            case "extreme_hills":
-                return BiomeTypes.EXTREME_HILLS;
-
-            case "flower_forest":
-                return BiomeTypes.FLOWER_FOREST;
-
-            case "forest":
-                return BiomeTypes.FOREST;
-
-            case "frozen_ocean":
-                return BiomeTypes.FROZEN_OCEAN;
-
-            case "frozen_river":
-                return BiomeTypes.FROZEN_RIVER;
-
-            case "hell":
-                return BiomeTypes.HELL;
-
-            case "ice_mountains":
-                return BiomeTypes.ICE_MOUNTAINS;
-
-            case "ice_plains":
-                return BiomeTypes.ICE_PLAINS;
-
-            case "ice_plains_spikes":
-                return BiomeTypes.ICE_PLAINS_SPIKES;
-
-            case "jungle":
-                return BiomeTypes.JUNGLE;
-
-            case "mega_spruce_taiga":
-                return BiomeTypes.MEGA_SPRUCE_TAIGA;
-
-            case "mega_taiga":
-                return BiomeTypes.MEGA_TAIGA;
-
-            case "mesa":
-                return BiomeTypes.MESA;
-
-            case "mushroom_island":
-                return BiomeTypes.MUSHROOM_ISLAND;
-
-            case "ocean":
-                return BiomeTypes.OCEAN;
-
-            case "plains":
-                return BiomeTypes.PLAINS;
-
-            case "river":
-                return BiomeTypes.RIVER;
-
-            case "roofed_forest":
-                return BiomeTypes.ROOFED_FOREST;
-
-            case "savanna":
-                return BiomeTypes.SAVANNA;
-
-            case "sky":
-                return BiomeTypes.SKY;
-
-            case "stone_beach":
-                return BiomeTypes.STONE_BEACH;
-
-            case "sunflower_plains":
-                return BiomeTypes.SUNFLOWER_PLAINS;
-
-            case "swampland":
-                return BiomeTypes.SWAMPLAND;
-
-            case "taiga":
-                return BiomeTypes.TAIGA;
-
-            case "void":
-                return BiomeTypes.VOID;
-
-            default: return null;
-        }
-    }
 }

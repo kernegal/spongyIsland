@@ -31,6 +31,7 @@ import io.github.kernegal.spongyisland.DataHolder;
 import io.github.kernegal.spongyisland.SpongyIsland;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.data.DataContainer;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.manipulator.mutable.entity.FoodData;
@@ -40,12 +41,18 @@ import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.world.World;
+import org.spongepowered.api.world.biome.BiomeType;
+import org.spongepowered.api.world.biome.BiomeTypes;
+import org.spongepowered.api.world.extent.Extent;
+import org.spongepowered.api.world.extent.worker.procedure.BiomeVolumeFiller;
 import org.spongepowered.api.world.schematic.Schematic;
 
+import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -100,7 +107,9 @@ public class IslandManager {
 
             Island is= new Island(schematic,
                     schematicNode.getNode("name").getString(),
-                    schematicNode.getNode("description").getString());
+                    schematicNode.getNode("description").getString(),
+                    getBiomeFromText(schematicNode.getNode("biome").getString("ocean"))
+            );
             this.islandsPresets.put(schematicNode.getNode("schematic_name").getString(),is);
             SpongyIsland.getPlugin().getLogger().info("Loaded schematic "+schematicNode.getNode("schematic_name").getString()+".");
 
@@ -109,6 +118,7 @@ public class IslandManager {
         Vector2i[] lastIslandsPosition = dataHolder.getLastIslandsPosition(2);
         this.lastIslandCreated = lastIslandsPosition[0];
         this.preLastIslandCreated = lastIslandsPosition[1];
+
     }
 
     public boolean create(String schematic, Player player){
@@ -156,7 +166,12 @@ public class IslandManager {
 
         }
         //TODO make the world configurable
-        World world = Sponge.getServer().getWorld("world").get();
+        Optional<World> worldOpt = Sponge.getServer().getWorld("world");
+        if(!worldOpt.isPresent()){
+            SpongyIsland.getPlugin().getLogger().error("World not found when changing biome");
+            return false;
+        }
+        World world = worldOpt.get();
         Vector3i position = new Vector3i(newIslandPos.getX()*islandRadius*2,islandHeight,newIslandPos.getY()*islandRadius*2);
         if(is.place(world,position,player)==-1) return false;
         preLastIslandCreated=lastIslandCreated;
@@ -166,8 +181,27 @@ public class IslandManager {
         dataHolder.newIsland(newIslandPos,position,player.getUniqueId());
         //dataHolder.uptdateIslandHome(player.getUniqueId(),position);
 
+        Vector3i min2 = position.sub(islandRadius,0,islandRadius);
+        Vector3i max2 = position.add(islandRadius,0,islandRadius);
+
+        Vector3i min = new Vector3i(min2.getX(),0,min2.getZ());
+        Vector3i max = new Vector3i(max2.getX(),255,max2.getZ());
+
+        Extent view = world.getExtentView(min, max);
+        BiomeType biome=is.getBiome();
+
+        view.getBiomeWorker().fill(new BiomeVolumeFiller() {
+            @Override
+            @Nonnull
+            public BiomeType produce(int x, int y, int z) {
+                return biome;
+            }
+        });
+
+        dataHolder.resetChallenges(player.getUniqueId());
+
         player.getInventory().clear();
-        player.offer(Keys.HEALTH, player.get(Keys.MAX_HEALTH).get());
+        player.offer(Keys.HEALTH, player.get(Keys.MAX_HEALTH).orElse(1.0));
         player.offer(Keys.FOOD_LEVEL,player.foodLevel().getDefault());
         player.offer(Keys.SATURATION,player.saturation().getDefault());
 
@@ -175,5 +209,104 @@ public class IslandManager {
         SpongyIsland.getPlugin().getLogger().info("pasting schematic "+schematic+" into position ("+newIslandPos.getX()*islandRadius*2+"["+newIslandPos.getX()
                 +"],"+newIslandPos.getY()*islandRadius*2+"["+newIslandPos.getY()+"])");
         return true;
+    }
+
+    public static BiomeType getBiomeFromText(String biome){
+        biome=biome.toLowerCase();
+
+        switch (biome) {
+            case "beach":
+                return BiomeTypes.BEACH;
+
+            case "birch_forest":
+                return BiomeTypes.BIRCH_FOREST;
+
+            case "cold_taiga":
+                return BiomeTypes.COLD_TAIGA;
+
+            case "deep_ocean":
+                return BiomeTypes.DEEP_OCEAN;
+
+            case "desert":
+                return BiomeTypes.DESERT;
+
+            case "extreme_hills":
+                return BiomeTypes.EXTREME_HILLS;
+
+            case "flower_forest":
+                return BiomeTypes.FLOWER_FOREST;
+
+            case "forest":
+                return BiomeTypes.FOREST;
+
+            case "frozen_ocean":
+                return BiomeTypes.FROZEN_OCEAN;
+
+            case "frozen_river":
+                return BiomeTypes.FROZEN_RIVER;
+
+            case "hell":
+                return BiomeTypes.HELL;
+
+            case "ice_mountains":
+                return BiomeTypes.ICE_MOUNTAINS;
+
+            case "ice_plains":
+                return BiomeTypes.ICE_PLAINS;
+
+            case "ice_plains_spikes":
+                return BiomeTypes.ICE_PLAINS_SPIKES;
+
+            case "jungle":
+                return BiomeTypes.JUNGLE;
+
+            case "mega_spruce_taiga":
+                return BiomeTypes.MEGA_SPRUCE_TAIGA;
+
+            case "mega_taiga":
+                return BiomeTypes.MEGA_TAIGA;
+
+            case "mesa":
+                return BiomeTypes.MESA;
+
+            case "mushroom_island":
+                return BiomeTypes.MUSHROOM_ISLAND;
+
+            case "ocean":
+                return BiomeTypes.OCEAN;
+
+            case "plains":
+                return BiomeTypes.PLAINS;
+
+            case "river":
+                return BiomeTypes.RIVER;
+
+            case "roofed_forest":
+                return BiomeTypes.ROOFED_FOREST;
+
+            case "savanna":
+                return BiomeTypes.SAVANNA;
+
+            case "sky":
+                return BiomeTypes.SKY;
+
+            case "stone_beach":
+                return BiomeTypes.STONE_BEACH;
+
+            case "sunflower_plains":
+                return BiomeTypes.SUNFLOWER_PLAINS;
+
+            case "swampland":
+                return BiomeTypes.SWAMPLAND;
+
+            case "taiga":
+                return BiomeTypes.TAIGA;
+
+            case "void":
+                return BiomeTypes.VOID;
+
+            default:
+                return BiomeTypes.OCEAN;
+        }
     }
 }

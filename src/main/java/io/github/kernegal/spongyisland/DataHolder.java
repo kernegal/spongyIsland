@@ -27,43 +27,68 @@ package io.github.kernegal.spongyisland;
 
 import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
+import com.google.common.reflect.TypeToken;
+import io.github.kernegal.spongyisland.utils.CompletedChallenges;
 import io.github.kernegal.spongyisland.utils.IslandPlayer;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.gson.GsonConfigurationLoader;
+import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.spongepowered.api.Sponge;
+import org.spongepowered.api.block.BlockState;
+import org.spongepowered.api.block.BlockType;
+import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.data.DataContainer;
+import org.spongepowered.api.data.DataQuery;
+import org.spongepowered.api.data.DataView;
+import org.spongepowered.api.data.key.Keys;
+import org.spongepowered.api.data.persistence.DataTranslator;
+import org.spongepowered.api.data.persistence.DataTranslators;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.event.cause.Cause;
+import org.spongepowered.api.event.cause.NamedCause;
+import org.spongepowered.api.item.ItemType;
+import org.spongepowered.api.item.ItemTypes;
+import org.spongepowered.api.item.inventory.Inventory;
+import org.spongepowered.api.item.inventory.ItemStack;
+import org.spongepowered.api.item.inventory.Slot;
+import org.spongepowered.api.service.economy.account.UniqueAccount;
 import org.spongepowered.api.service.sql.SqlService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
+import org.spongepowered.api.world.extent.Extent;
+import sun.nio.cs.ArrayEncoder;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.*;
 
+import static javax.xml.bind.JAXBIntrospector.getValue;
 
-/**
- * Created by kernegal on 04/10/2016.
- */
+
 public class DataHolder {
     private SqlService sql;
     private static final String dbPath="./world/data/spongyisland";
     private String jdbcUrl;
     private Map<UUID, IslandPlayer> players;
+    private Map<UUID,CompletedChallenges> playerChallenges;
+    private ConfigurationNode challenges,config;
 
     private javax.sql.DataSource getDataSource() throws SQLException {
         return sql.getDataSource(jdbcUrl);
     }
 
-    /**
-     * Constructor - initializes the state variables and create the db if necessary
-     *
-     */
-    public DataHolder() {
+    public DataHolder(ConfigurationNode challenges, ConfigurationNode config) {
         Optional<SqlService> sqlOpt = Sponge.getServiceManager().provide(SqlService.class);
         if(!sqlOpt.isPresent()){
             SpongyIsland.getPlugin().getLogger().error("An error occurred when  getting the sql service ");
-            //TODO exit properly
+            return;//TODO exit properly
         }
         sql = sqlOpt.get();
         jdbcUrl="jdbc:h2:"+dbPath;
@@ -104,6 +129,7 @@ public class DataHolder {
                             "   PRIMARY KEY (cid,pid)\n" +
                             ");").execute();
                 } finally {
+
                     conn.close();
                 }
             } catch (SQLException e) {
@@ -111,6 +137,10 @@ public class DataHolder {
             }
         }
         players = new HashMap<>();
+        playerChallenges = new HashMap<>();
+
+        this.challenges = challenges;
+        this.config=config;
     }
 
     private IslandPlayer getPlayerFromDB(UUID uuid){
@@ -180,7 +210,28 @@ public class DataHolder {
                 players.put(uuid,playerInfo);
             }
         }
-        SpongyIsland.getPlugin().getLogger().info("new player! uuid: "+playerInfo.getUuid()+" Name: "+playerInfo.getName());
+        //SpongyIsland.getPlugin().getLogger().info("new player! uuid: "+playerInfo.getUuid()+" Name: "+playerInfo.getName());
+
+        try(Connection conn = getDataSource().getConnection()) {
+            try {
+                ResultSet rs = conn.prepareStatement("SELECT cid,ntimes\n" +
+                        "        FROM completed\n" +
+                        "        WHERE pid='"+players.get(uuid).getId()+"';").executeQuery();
+                CompletedChallenges c = new CompletedChallenges(challenges.getNode("root_level").getString());
+                playerChallenges.put(uuid,c);
+
+                while(rs.next()) {
+                    String challenge = rs.getString("cid");
+                    int ntimes = rs.getInt("ntimes");
+                    c.setChallengeCompleted(challenge,challenges.getNode("challenge_list",challenge,"level").getString(),ntimes);
+                }
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
+        }
+
 
     }
 
@@ -222,6 +273,7 @@ public class DataHolder {
                                 "        WHERE id="+players.get(player).getId()+";").execute();
                         players.get(player).setIsHome(worldPos);
                         players.get(player).setIsland(generatedKeys.getInt(1),gridPos);
+
                         //players.get(player).setIsPosition(gridPos);
                     }
                 }
@@ -345,6 +397,347 @@ public class DataHolder {
         } catch (SQLException e) {
             SpongyIsland.getPlugin().getLogger().error(e.toString());
         }
+
+    }
+
+    public boolean hasAccessToLevel(UUID player, String level){
+        String root=challenges.getNode("root_level").getString();
+        String requiredLevel=challenges.getNode("level_list",level,"required_level").getString("");
+        int challengesRequired = challenges.getNode("level_list",requiredLevel,"required_challenges").getInt(0);
+
+        return level.equals(root) || requiredLevel.isEmpty()
+                || playerChallenges.get(player).challengesCompletedInLevel(requiredLevel)>=challengesRequired;
+
+    }
+
+    public boolean challengeIsCompleted(UUID player, String challenge){
+        return playerChallenges.get(player).timesCompleted(challenge)!=0;
+    }
+
+    public boolean canCompleteChallenge(UUID player, String challenge){
+        ConfigurationNode challengeNode=challenges.getNode("challenge_list",challenge);
+        int timesCompleted = playerChallenges.get(player).timesCompleted(challenge);
+        int maxTimes = challengeNode.getNode("max_times").getInt(0);
+        return timesCompleted !=0 &&
+                (!challengeNode.getNode("repeatable").getBoolean() ||
+                maxTimes!=0 && timesCompleted>=maxTimes);
+
+    }
+
+    public void completeChallenge(String challenge, int times ,Player player){
+
+        ConfigurationNode challengeNode=challenges.getNode("challenge_list",challenge);
+        if(challengeNode.getNode("friendly_name").getString()==null){
+            player.sendMessage(Text.of("That challenge don't exist"));
+            return;
+        }
+        if(!hasAccessToLevel(player.getUniqueId(),challengeNode.getNode("level").getString(""))){
+            player.sendMessage(Text.of("You don't have access to that level"));
+            return;
+        }
+
+        if(canCompleteChallenge(player.getUniqueId(),challenge)){
+            player.sendMessage(Text.of("You can't complete that challenge any more times"));
+            return;
+        }
+
+        String type = challengeNode.getNode("type").getString("");
+        String requiredItems = challengeNode.getNode("required_items").getString("");
+        String itemReward;
+        String textReward;
+        int moneyReward,expReward;
+
+        int timesCompleted = playerChallenges.get(player.getUniqueId()).timesCompleted(challenge);
+
+        if(timesCompleted==0) {
+            itemReward = challengeNode.getNode("item_reward").getString("");
+            textReward = challengeNode.getNode("reward_text").getString("");
+            expReward = challengeNode.getNode("exp_eward").getInt(0);
+            moneyReward = challengeNode.getNode("money_reward").getInt(0);
+
+        }
+        else{
+            itemReward = challengeNode.getNode("repeat_item_reward").getString("");
+            textReward = challengeNode.getNode("repeat_reward_text").getString("");
+            expReward = challengeNode.getNode("repeat_exp_reward").getInt(0);
+            moneyReward = challengeNode.getNode("money_reward").getInt(0);
+
+        }
+
+
+
+        if(type.equals("inventory") ){
+            String[] requiredItemsArray = requiredItems.split(" ");
+            ArrayList< ArrayList<Slot> > inventorySlots = new ArrayList<>(requiredItemsArray.length);
+            for(int i=0;i<requiredItemsArray.length;i++){
+                String item= requiredItemsArray[i];
+                inventorySlots.add(new ArrayList<>());
+                String[] itemElements = item.split(",");
+                long itemUnsafeDamage;
+                int quantity;
+
+                if(itemElements.length>2){
+                    itemUnsafeDamage=Integer.parseInt(itemElements[1]);
+                    quantity=Integer.parseInt(itemElements[2]);
+                }
+                else{
+                    quantity=Integer.parseInt(itemElements[1]);
+                    itemUnsafeDamage=-1;
+                }
+                Optional<ItemType> itemType = Sponge.getGame().getRegistry().getType(ItemType.class, itemElements[0]);
+                if(itemType.isPresent()){
+                    Iterable<Slot> slotIter = player.getInventory().slots();
+
+                    int needed=quantity;
+                    for (Slot slot: slotIter){
+                        Optional<ItemStack> slotItemStack = slot.peek();
+                        if(slotItemStack.isPresent()){
+                            ItemStack itemStack= slotItemStack.get();
+                            Long unsafeDamage = itemStack.toContainer().getLong(DataQuery.of("UnsafeDamage")).orElse(0L);
+
+                            if(itemType.get().matches(itemStack) && !(itemUnsafeDamage!=-1 && itemUnsafeDamage!=unsafeDamage)){
+                                inventorySlots.get(i).add(slot);
+                                needed-=itemStack.getQuantity();
+                                if(needed<=0) break;
+                            }
+                        }
+
+                    }
+                    if(needed>0){
+                        player.sendMessage(Text.of("You don't have all required items"));
+                        return;
+                    }
+
+                }
+                else{
+                    SpongyIsland.getPlugin().getLogger().warn("item type incorrect: "+itemElements[0]);
+                }
+
+
+            }
+            if(challengeNode.getNode("take_items").getBoolean(true)) {
+                for (int i = 0; i < requiredItemsArray.length; i++) {
+
+                    String item = requiredItemsArray[i];
+                    String[] split = item.split(",");
+                    int quantity = split.length > 2 ?
+                            Integer.parseInt(split[2]) :
+                            Integer.parseInt(split[1]);
+
+                    ArrayList<Slot> slotArray = inventorySlots.get(i);
+                    for (Slot slot : slotArray) {
+                        if (slot.getStackSize() < quantity) {
+                            quantity -= slot.getStackSize();
+                            slot.clear();
+                        } else {
+                            slot.poll(quantity);
+                        }
+                    }
+                }
+            }
+
+
+        }
+        else if( type.equals("level") ){
+            try(Connection conn = getDataSource().getConnection()) {
+                try {
+                    ResultSet rs  = conn.prepareStatement("SELECT level\n" +
+                            "        FROM island\n" +
+                            "        WHERE id="+players.get(player.getUniqueId()).getIsland()+";").executeQuery();
+                    if (rs.next()) {
+                        if(rs.getInt("level")<challengeNode.getNode("required_items").getInt(0)){
+                            player.sendMessage(Text.of(TextColors.DARK_RED,"You don't have the required level"));
+                            return;
+                        }
+
+                    }
+                    else{
+                        player.sendMessage(Text.of(TextColors.DARK_RED,"You don't have the required level"));
+                        return;
+                    }
+                } finally {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                SpongyIsland.getPlugin().getLogger().error(e.toString());
+                return;
+            }
+        }
+        else if( type.equals("island") ){
+            String[] requiredItemsArray = requiredItems.split(" ");
+            for(int i=0;i<requiredItemsArray.length;i++) {
+
+                String item= requiredItemsArray[i];
+                String[] itemElements = item.split(",");
+                int itemUnsafeDamage;
+                int quantity;
+
+                if(itemElements.length>2){
+                    itemUnsafeDamage=Integer.parseInt(itemElements[1]);
+                    quantity=Integer.parseInt(itemElements[2]);
+                }
+                else{
+                    quantity=Integer.parseInt(itemElements[1]);
+                    itemUnsafeDamage=0;
+                }
+
+                Optional<BlockType> blockType = Sponge.getGame().getRegistry().getType(BlockType.class, itemElements[0]);
+
+                if(blockType.isPresent()) {
+                    Vector3i playerPosition = player.getLocation().getBlockPosition();
+
+                    World world = Sponge.getServer().getWorld("world").get();
+                    Extent view = world.getExtentView(playerPosition.sub(10, 10, 10),
+                            playerPosition.add(10, 10, 10));
+
+                    GsonConfigurationLoader loader = GsonConfigurationLoader.builder().build();
+                    ConfigurationNode node = loader.createEmptyNode();
+
+                    node.getNode("ContentVersion").setValue(1);
+                    node.getNode("ItemType").setValue(itemElements[0]);
+                    node.getNode("Count").setValue(quantity);
+                    node.getNode("UnsafeDamage").setValue(itemUnsafeDamage);
+
+
+                    int sum = view.getBlockWorker(Cause.of(NamedCause.of("plugin", SpongyIsland.getPlugin().getPluginContainer()))).reduce(
+                            (vol, x, y, z, red) -> vol.getBlockType(x, y, z).equals(BlockTypes.AIR) ?
+                                    red :
+                                    red + isSameBlockType(vol.getBlock(x, y, z),blockType.get(),itemUnsafeDamage)
+                            ,
+                            (a, b) -> a + b,
+                            0);
+                    if(sum<quantity){
+                        player.sendMessage(Text.of(TextColors.DARK_RED,"All the required items needs to be 10 blocks nar you"));
+                        return;
+                    }
+
+                }
+
+            }
+        }
+        else{
+            player.sendMessage(Text.of("Not implemented"));
+            return;
+        }
+
+
+        player.sendMessage(Text.of(textReward));
+        String[] itemsStr = itemReward.split(" ");
+        for(String itemStr :itemsStr){
+            String[] itemElements = itemStr.split(",");
+            Optional<ItemType> itemType = Sponge.getGame().getRegistry().getType(ItemType.class, itemElements[0]);
+            if(itemType.isPresent()) {
+                int itemUnsafeDamage;
+                int quantity;
+
+                if (itemElements.length > 2) {
+                    itemUnsafeDamage = Integer.parseInt(itemElements[1]);
+                    quantity = Integer.parseInt(itemElements[2]);
+                } else {
+                    quantity = Integer.parseInt(itemElements[1]);
+                    itemUnsafeDamage = 0;
+                }
+
+                if(config.getNode("general","economy").getBoolean(false)) {
+                    Optional<UniqueAccount> orCreateAccount = SpongyIsland.getPlugin().getEconomyService().getOrCreateAccount(player.getUniqueId());
+                    if(orCreateAccount.isPresent()){
+                        orCreateAccount.get().deposit(
+                                SpongyIsland.getPlugin().getEconomyService().getDefaultCurrency(),
+                                BigDecimal.valueOf((long)moneyReward),
+                                Cause.source(this).build()
+                        );
+
+                    }
+                }
+
+                player.offer(Keys.TOTAL_EXPERIENCE,player.get(Keys.TOTAL_EXPERIENCE).orElse(0)+expReward);
+
+                GsonConfigurationLoader loader = GsonConfigurationLoader.builder().build();
+                ConfigurationNode node = loader.createEmptyNode();
+
+                node.getNode("ContentVersion").setValue(1);
+                node.getNode("ItemType").setValue(itemElements[0]);
+                node.getNode("Count").setValue(quantity);
+                node.getNode("UnsafeDamage").setValue(itemUnsafeDamage);
+
+                ItemStack itemStack;
+                try {
+                    itemStack= node.getValue(TypeToken.of(ItemStack.class));
+                } catch (ObjectMappingException e) {
+                    SpongyIsland.getPlugin().getLogger().warn(e.toString());
+                    return;
+                }
+
+
+                player.getInventory().offer(itemStack);
+
+            }
+            else{
+                SpongyIsland.getPlugin().getLogger().warn("item type incorrect: "+itemElements[0]);
+            }
+
+
+        }
+
+        //INSERT INTO table (id,name,age) VALUES('1','Mohammad','21') ON DUPLICATE KEY UPDATE name='Mohammad',age='21'
+
+        try(Connection conn = getDataSource().getConnection()) {
+            try {
+                int id= players.get(player.getUniqueId()).getId();
+                //int timesCompleted = playerChallenges.get(player.getUniqueId()).timesCompleted(challenge);
+                timesCompleted++;
+                conn.prepareStatement("REPLACE INTO completed (cid,pid,ntimes) " +
+                        "VALUES('"+ challenge +"','"+ id +"','"+timesCompleted +"');").execute();
+
+                playerChallenges.get(player.getUniqueId()).setChallengeCompleted(challenge,challengeNode.getNode("level").getString(""));
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
+        }
+    }
+
+    private int isSameBlockType(BlockState bs, BlockType type, int damage){
+        //ItemStack is=ItemStack.builder().fromBlockState(bs).build();
+        if(bs.getType().getItem().equals(type)){
+            /*if(damage!=0) {
+                Optional<Long> unsafeDamage = is.toContainer().getLong(DataQuery.of("UnsafeDamage"));
+                if(unsafeDamage.isPresent() && unsafeDamage.get()==damage){
+                    return 1;
+                }
+
+            }
+            else{
+                return 1;
+            }*/
+            return 1;
+        }
+        return 0;
+    }
+
+    public String getLastLevelIssued(UUID uuid){
+        return playerChallenges.get(uuid).getLastLevel();
+    }
+
+    public int getCompletedChallengesInLevel(UUID uuid,String level){
+        return playerChallenges.get(uuid).challengesCompletedInLevel(level);
+    }
+
+    public void resetChallenges(UUID uuid){
+        try(Connection conn = getDataSource().getConnection()) {
+            try {
+                conn.prepareStatement("DELETE FROM completed\n" +
+                        "        WHERE pid='"+players.get(uuid).getId()+"';").execute();
+                playerChallenges.put(uuid,new CompletedChallenges(challenges.getNode("root_level").getString()));
+            } finally {
+                conn.close();
+            }
+        } catch (SQLException e) {
+            SpongyIsland.getPlugin().getLogger().error(e.toString());
+        }
+
+
 
     }
 }
