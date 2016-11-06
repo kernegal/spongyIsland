@@ -125,4 +125,12 @@ public class Island {
     public BiomeType getBiome() {
         return biome;
     }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
 }

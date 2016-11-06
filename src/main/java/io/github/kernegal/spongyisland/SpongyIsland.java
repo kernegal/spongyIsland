@@ -61,7 +61,7 @@ import java.io.*;
         description = SpongyIsland.pluginDescription)
 public class SpongyIsland {
 
-    public static final String version="0.3.0";
+    public static final String version="0.3.1";
     public static final String pluginId="spongyisland";
     public static final String pluginName="Spongy Island";
     public static final String pluginDescription="A skyblock plugin for sponge";
@@ -96,6 +96,7 @@ public class SpongyIsland {
     private CommentedConfigurationNode challengesConfigNode;
     private CommentedConfigurationNode valuesConfigNode;
     private CommentedConfigurationNode biomeShopConfigNode;
+    private CommentedConfigurationNode islandCommandConfigNode;
 
     public File getConfigPath() { return this.configDir; }
     public File getSchematicsFolder() { return schematicsFolder; }
@@ -146,9 +147,8 @@ public class SpongyIsland {
                 while(-1 != (r = ddlStream.read(buf))) {
                     fos.write(buf, 0, r);
                 }
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+                fos.close();
+            }  catch (IOException e) {
                 e.printStackTrace();
             }
 
@@ -169,6 +169,10 @@ public class SpongyIsland {
         File biomeShopConfig = new File(configDir, "biomeshop.conf");
         ConfigurationLoader<CommentedConfigurationNode> biomeShopConfigManager =
                 HoconConfigurationLoader.builder().setFile(biomeShopConfig).build();
+
+        File islandCommandConfig = new File(configDir, "islandCommand.conf");
+        ConfigurationLoader<CommentedConfigurationNode> islandCommandConfigManager =
+                HoconConfigurationLoader.builder().setFile(islandCommandConfig).build();
         try {
             if(!globalConfig.exists()){
                 globalConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/config.conf")).build().load();
@@ -179,8 +183,23 @@ public class SpongyIsland {
             }
 
             if(!challengesConfig.exists()){
-                challengesConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/challenges.conf")).build().load();
-                challengesConfigManager.save(challengesConfigNode);
+                InputStream ddlStream = this.getClass().getResourceAsStream("defaultConfigs/challenges.conf");
+
+                try (FileOutputStream fos = new FileOutputStream(challengesConfig)){
+                    byte[] buf = new byte[2048];
+                    int r;
+                    while(-1 != (r = ddlStream.read(buf))) {
+                        fos.write(buf, 0, r);
+                    }
+                    fos.close();
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                challengesConfigNode = challengesConfigManager.load();
+                //challengesConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/challenges.conf")).build().load();
+                //challengesConfigManager.save(challengesConfigNode);
             }
             else{
                 challengesConfigNode = challengesConfigManager.load();
@@ -201,6 +220,15 @@ public class SpongyIsland {
             }
             else{
                 biomeShopConfigNode = biomeShopConfigManager.load();
+
+            }
+
+            if(!islandCommandConfig.exists()) {
+                islandCommandConfigNode = HoconConfigurationLoader.builder().setURL(this.getClass().getResource("defaultConfigs/islandcommand.conf")).build().load();
+                islandCommandConfigManager.save(islandCommandConfigNode);
+            }
+            else{
+                islandCommandConfigNode = islandCommandConfigManager.load();
 
             }
 
@@ -246,7 +274,7 @@ public class SpongyIsland {
         //is create
         CommandSpec newIsCreateCommand =  CommandSpec.builder()
                 .description(Text.of("Create new island"))
-                .arguments(GenericArguments.string(Text.of("schematic")))
+                .arguments(GenericArguments.optional(GenericArguments.string(Text.of("schematic"))))
                 .executor(new IsCreate(isManager,data))
                 .build();
 
@@ -294,20 +322,20 @@ public class SpongyIsland {
         //is
         CommandSpec newIslandCommand =  CommandSpec.builder()
                 .description(Text.of("list island commands"))
-                .child(newIsCreateCommand,"create","reset")
+                .child(newIsCreateCommand,IsCreate.commandName,"reset")
                 .child(newIsHomeCommand,"home", "h")
-                .child(newIsSetHomeCommand,"setHome", "sh")
+                .child(newIsSetHomeCommand,"sethome", "sh")
                 .child(newIsLevelCommand,"level", "l")
                 .child(topIslandCommand,"top")
                 .child(isBiomeShopCommand,IBiomeShop.commandName)
-                .executor(new IslandCommand())
+                .executor(new IslandCommand(islandCommandConfigNode))
                 .build();
 
         Sponge.getCommandManager().register(this, newIslandCommand, "island", "is");
 
         //challenges
         CommandSpec completeChallengeCommand =  CommandSpec.builder()
-                .description(Text.of("show challenges"))
+                .description(Text.of("Complete a challenge"))
                 .arguments(
                         GenericArguments.string(Text.of(CComplete.argChallenge)),
                         GenericArguments.optional(GenericArguments.integer(Text.of(CComplete.argTimes)))

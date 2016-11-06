@@ -29,6 +29,7 @@ import com.flowpowered.math.vector.Vector2i;
 import com.flowpowered.math.vector.Vector3i;
 import io.github.kernegal.spongyisland.DataHolder;
 import io.github.kernegal.spongyisland.SpongyIsland;
+import io.github.kernegal.spongyisland.commands.IsCreate;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandResult;
@@ -38,8 +39,11 @@ import org.spongepowered.api.data.manipulator.mutable.entity.FoodData;
 import org.spongepowered.api.data.persistence.DataFormats;
 import org.spongepowered.api.data.persistence.DataTranslators;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.text.BookView;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.text.format.TextStyles;
 import org.spongepowered.api.world.World;
 import org.spongepowered.api.world.biome.BiomeType;
 import org.spongepowered.api.world.biome.BiomeTypes;
@@ -308,5 +312,42 @@ public class IslandManager {
             default:
                 return BiomeTypes.OCEAN;
         }
+    }
+    public BookView getIslandBook(){
+        BookView.Builder bookView = BookView.builder()
+                .title(Text.of("Biome Shop"))
+                .author(Text.of("SpongyIsland"));
+
+        Text page=Text.EMPTY;
+        final int charPerRow=20;
+        final int linesPerPage=14;
+        int actualLines=0;
+        for(Map.Entry<String, Island> entry : islandsPresets.entrySet()) {
+            String islandNameStr = entry.getValue().getName();
+            Text islandName = Text.builder(islandNameStr)
+                    .color(TextColors.DARK_BLUE)
+                    .style(TextStyles.UNDERLINE)
+                    .onClick(TextActions.runCommand("/is "+ IsCreate.commandName+" "+entry.getKey()))
+                    .build();
+            String islandDescriptionStr = entry.getValue().getDescription();
+            Text islandDescription = Text.builder(islandDescriptionStr).build();
+            int numLines = islandNameStr.length()/charPerRow+islandDescriptionStr.length()/charPerRow+2;
+            if(actualLines+numLines>linesPerPage && actualLines!=0){
+
+                bookView.addPage(page);
+                page=Text.EMPTY;
+                actualLines=0;
+            }
+
+            page = Text.of(page, Text.NEW_LINE,
+                    islandName, Text.NEW_LINE,
+                    islandDescription, Text.NEW_LINE);
+            actualLines+=numLines+1;
+
+        }
+        bookView.addPage(page);
+
+
+        return bookView.build();
     }
 }

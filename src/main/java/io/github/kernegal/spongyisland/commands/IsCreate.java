@@ -44,6 +44,8 @@ import java.util.Optional;
 
 public class IsCreate implements CommandExecutor {
 
+    public static final String commandName="create";
+
     private IslandManager isManager;
     private DataHolder data;
 
@@ -95,7 +97,7 @@ public class IsCreate implements CommandExecutor {
 
         }
         else{
-            //player.sendBookView(isManager.getIlandBook());
+            player.sendBookView(isManager.getIslandBook());
 
         }
         return CommandResult.success();
