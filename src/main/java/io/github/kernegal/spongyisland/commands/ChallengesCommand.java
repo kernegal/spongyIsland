@@ -96,7 +96,10 @@ public class ChallengesCommand implements CommandExecutor {
                 continue;
 
             Text challengeDescription = Text.of(TextColors.AQUA,entry.getValue().getNode("description").getString());
-            Text challengeReward = Text.of("Reward: ",TextColors.GREEN,entry.getValue().getNode("reward_text").getString());
+            Text challengeReward = Text.of("Reward: ",TextColors.GREEN,
+                    data.challengeIsCompleted(player.getUniqueId(),entry.getKey().toString())?
+                            entry.getValue().getNode("repeat_reward_text").getString():entry.getValue().getNode("reward_text").getString()
+            );
             String challengeStr= entry.getValue().getNode("friendly_name").getString("NAME ERROR");
             Text.Builder challengeBuilder = Text.builder(challengeStr);
 

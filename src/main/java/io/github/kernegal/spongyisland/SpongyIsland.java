@@ -61,7 +61,7 @@ import java.io.*;
         description = SpongyIsland.pluginDescription)
 public class SpongyIsland {
 
-    public static final String version="0.3.1";
+    public static final String version="0.3.2";
     public static final String pluginId="spongyisland";
     public static final String pluginName="Spongy Island";
     public static final String pluginDescription="A skyblock plugin for sponge";
@@ -151,6 +151,23 @@ public class SpongyIsland {
             }  catch (IOException e) {
                 e.printStackTrace();
             }
+
+            File hardSchem= new File(schematicsFolder, "harder.schematic");
+
+
+            InputStream hardddlStream = this.getClass().getResourceAsStream("defaultSchematics/harder.schematic");
+
+            try (FileOutputStream fos = new FileOutputStream(hardSchem)){
+                byte[] buf = new byte[2048];
+                int r;
+                while(-1 != (r = hardddlStream.read(buf))) {
+                    fos.write(buf, 0, r);
+                }
+                fos.close();
+            }  catch (IOException e) {
+                e.printStackTrace();
+            }
+
 
         }
 
@@ -255,10 +272,9 @@ public class SpongyIsland {
 
         prepareCommands();
 
-        getLogger().info("sending some weird stuff to test my pluginContainer");
-        getLogger().info("SDASGdfHFDHGJSGJ SJ GJSGJ S JFJFGGSJGJGSJGJNSF \n" +
-                "SGJGFJFJD GS GJGSJ GF JGJ F \n" +
-                "SGJ S J GJ GSJ GJ   SJ SJ\n");
+        getLogger().info("Initialization complete");
+
+
 
     }
 

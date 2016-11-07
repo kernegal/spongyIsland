@@ -25,6 +25,7 @@
 
 package io.github.kernegal.spongyisland.commands;
 
+import io.github.kernegal.spongyisland.SpongyIsland;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
@@ -54,7 +55,7 @@ public class IslandCommand implements CommandExecutor {
 
         Text page=Text.EMPTY;
         final int charPerRow=20;
-        final int linesPerPage=14;
+        final int linesPerPage=13;
         int actualLines=0;
         for(Map.Entry<Object, ? extends ConfigurationNode> entry : conf.getNode("commands").getChildrenMap().entrySet()) {
             String nameStr = entry.getValue().getNode("friendly_name").getString("");
@@ -67,6 +68,7 @@ public class IslandCommand implements CommandExecutor {
             Text description = Text.builder(descriptionStr).build();
 
             int numLines = nameStr.length()/charPerRow+descriptionStr.length()/charPerRow+2;
+            SpongyIsland.getPlugin().getLogger().info("why this is 2? "+numLines+"+"+actualLines+">"+linesPerPage);
             if(actualLines+numLines>linesPerPage && actualLines!=0){
 
                 bookView.addPage(page);
