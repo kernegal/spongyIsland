@@ -67,7 +67,7 @@ public class IslandProtection {
 
     @Listener
     @IsCancelled(Tristate.FALSE)
-    public void blockPlaceEvent(ChangeBlockEvent.Place event, @Root Player player) {
+    public void blockPlaceEvent(ChangeBlockEvent.Place event, @First Player player) {
         if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
             return;
         }
@@ -100,7 +100,7 @@ public class IslandProtection {
 
     @Listener
     @IsCancelled(Tristate.FALSE)
-    public void blockBreakEvent(ChangeBlockEvent.Break event, @Root Player player) {
+    public void blockBreakEvent(ChangeBlockEvent.Break event, @First Player player) {
         if(player.hasPermission(SpongyIsland.pluginId+".islands.modify_blocks")){
             return;
         }
