@@ -575,7 +575,7 @@ public class DataHolder {
         }
         else if( type.equals("island") ){
             IslandPlayer playerData = players.get(player.getUniqueId());
-            int islandRadius = config.getNode("radius").getInt(), protectionRadius=config.getNode("protectionRadius").getInt();
+            int islandRadius = config.getNode("island","radius").getInt(), protectionRadius=config.getNode("island","protectionRadius").getInt();
             Vector2i islandCoordinates=playerData.getIsPosition().mul(islandRadius*2);
 
             Location<World> location = player.getLocation();
